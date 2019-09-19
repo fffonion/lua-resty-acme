@@ -1,6 +1,6 @@
 # lua-resty-acme
 
-Automatic Let's Encrypt certificate serving and Lua implementation of the ACME protocol.
+Automatic Let's Encrypt certificate serving (RSA + ECC) and Lua implementation of the ACME protocol.
 
 Table of Contents
 =================
@@ -46,7 +46,7 @@ luarocks install lua-resty-worker-events
 Status
 ========
 
-Work in progress.
+Experimental.
 
 Synopsis
 ========
@@ -54,13 +54,20 @@ Synopsis
 Create account private key and fallback certs:
 
 ```shell
+# create account key
 openssl genpkey -algorithm RSA -pkeyopt rsa_keygen_bits:4096 -out /path/to/account.key
+# create fallback cert and key
 openssl req -newkey rsa:2048 -nodes -keyout /path/to/default.pem -x509 -days 365 -out /path/to/default.key
+# create fallback ecc cert and key if you wish to use ecdsa
+openssl ecparam -name prime256v1 -genkey -out /path/to/default-ecc.key
+openssl req -new -sha256 -key /path/to/default-ecc.key -subj "/" -out temp.csr
+openssl x509 -req -sha256 -days 365 -in temp.csr -signkey /path/to/default-ecc.key -out /path/to/default-ecc.pem
+
 ```
 
 Use the following example config:
 
-```
+```lua
 events {}
 
 http {
@@ -71,6 +78,13 @@ http {
 
     init_by_lua_block {
         require("resty.acme.autossl").init({
+            -- setting the following to true
+            -- implies that you read and accepted https://letsencrypt.org/repository/
+            tos_accepted = true,
+            -- uncomment following to first time setup
+            -- staging = true,
+            -- uncomment folloing to enable RSA + ECC double cert
+            -- domain_key_types = { 'rsa', 'ecc' },
             account_key_path = "/path/to/account.key",
             account_email = "youemail@youdomain.com",
         })
@@ -92,6 +106,10 @@ http {
         ssl_certificate /path/to/default.pem;
         ssl_certificate_key /path/to/default.key;
 
+        # fallback ECC certs, uncomment folloing to enable RSA + ECC double cert
+        # ssl_certificate /path/to/default-ecc.pem;
+        # ssl_certificate_key /path/to/default-ecc.key;
+
         ssl_certificate_by_lua_block {
             require("resty.acme.autossl").ssl_certificate()
         }
@@ -105,21 +123,42 @@ http {
 }
 ```
 
+When testing deployment, it's recommanded to uncomment the `staging = true` to allow an
+end-to-end test of your environment. This can avoid configuration failure result into too
+many requests that hits [rate limiting](https://letsencrypt.org/docs/rate-limits/) on Let's Encrypt API.
+
+By default `autossl` only creates RSA certificates. To use ECC certificates or both, uncomment
+`domain_key_types = { 'rsa', 'ecc' }` and the fallback ECC certs. Note that multiple certificate
+chain is only supported by OpenSSL 1.1 and later, check the OpenSSL version your OpenResty
+installation is using by runing `openresty -V` first.
+
+A certificate will be *queued* to create after Nginx seen request with such SNI, which might
+take tens of seconds to finish. During the meatime, requests with such SNI are responsed
+with the fallback certificate.
+
 
 ## resty.acme.autossl
 
 A config table can be passed to `resty.acme.autossl.init()`, the default values are:
 
 ```lua
-local default_config = {
+  -- accept term of service https://letsencrypt.org/repository/
+  tos_accepted = false,
   -- if using the let's encrypt staging API
   staging = false,
   -- the path to account private key in PEM format
   account_key_path = nil,
   -- the account email to register
   account_email = nil,
-  -- the global domain private key
-  domain_rsa_key_path = nil,
+  domain_key_paths = {
+    -- the global domain RSA private key
+    rsa = nil,
+    -- the global domain ECC private key
+    ecc = nil,
+  },
+  -- the private key algorithm to use, can be one or both of
+  -- 'rsa' and 'ecc'
+  domain_key_types = { 'rsa' },
   -- the threshold to renew a cert before it expires, in seconds
   renew_threshold = 7 * 86400,
   -- interval to check cert renewal, in seconds
@@ -136,14 +175,15 @@ local default_config = {
 ```
 
 If `account_key_path` is not specified, a new account key will be created
-**everytime** Nginx reloads configuration. Note this may trigger
+**everytime** Nginx reloads configuration. Note this may trigger **New Account**
 [rate limiting](https://letsencrypt.org/docs/rate-limits/) on Let's Encrypt API.
 
-If `domain_rsa_key_path` is not specified, a new 4096 bits RSA key will be generated
-for each certificate. Note that generating such key will block worker and will be
-especially noticable on VMs where entropy is low.
+If `domain_key_paths` is not specified, a new private key will be generated
+for each certificate (4096-bits RSA and 256-bits prime256v1 ECC). Note that
+generating such key will block worker and will be especially noticable on VMs
+where entropy is low.
 
-See [Storage Adapters](#storage-adapters) section to see
+See also [Storage Adapters](#storage-adapters) below.
 
 ## resty.acme.client
 
@@ -172,8 +212,9 @@ local default_config = {
 
 If `account_kid` is omitted, user must call `client:new_account()` to register a
 new account. Note that when using the same `account_key`, `client:new_account()`
-will not actually create a new account at the ACME server but just return the
-previously registered `kid`.
+will return the same `kid` that is previosuly registered.
+
+See also [Storage Adapters](#storage-adapters) below.
 
 [Back to TOC](#table-of-contents)
 
@@ -226,8 +267,8 @@ Hashicorp [Vault](https://www.vaultproject.io/) based storage.
 TODO
 ====
 - autossl: Persistent the auto generated account key
-- autossl: Use cache in autossl
-- autossl: Select domain to whitelist/blacklist
+- autossl: worker level DER cache with mlcache
+- autossl: Select domain to register with whitelist/blacklist
 - Add tests
 - client: Alternatively use lua-resty-nettle when luaossl is not available
 

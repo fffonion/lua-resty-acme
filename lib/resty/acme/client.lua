@@ -16,7 +16,7 @@ local openssl = {
 local log = ngx.log
 local ngx_ERR = ngx.ERR
 local ngx_INFO = ngx.INFO
-local ngx_DEBUG = ngx.ERR
+local ngx_DEBUG = ngx.DEBUG
 
 local _M = {}
 local mt = {__index = _M}

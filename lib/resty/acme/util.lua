@@ -57,12 +57,13 @@ local function create_csr(domain_pkey, ...)
   return csr:tostring("DER")
 end
 
-local function create_pkey(bits, typ)
+local function create_pkey(bits, typ, curve)
   bits = bits or 4096
   typ = typ or 'RSA'
   local pkey = openssl.pkey.new({
     bits = bits,
     type = typ,
+    curve = curve,
   })
 
   return pkey:toPEM('private')
