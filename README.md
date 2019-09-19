@@ -33,12 +33,13 @@ luarocks install luaossl
 Installing `luaossl` requires you to have a working compiler toolchain and the openssl headers installed
 (`libssl-dev` on Ubuntu/Debian, and `openssl-devel` on CentOS/Fedora).
 
-Also, if you are using `resty.acme.autossl`, an extra dependency
-[Kong/lua-resty-worker-events](https://github.com/Kong/lua-resty-worker-events) is needed to handle
+Also, if you are using `resty.acme.autossl`, two dependencies
+[Kong/lua-resty-worker-events](https://github.com/Kong/lua-resty-worker-events) and [openresty/lua-resty-lrucache](https://github.com/openresty/lua-resty-lrucache) is needed to handle
 certificate creation and cache invalidation.
 
 ```shell
 luarocks install lua-resty-worker-events
+luarocks install lua-resty-lrucache
 ```
 
 [Back to TOC](#table-of-contents)
@@ -142,6 +143,8 @@ default_config = {
   account_key_path = nil,
   -- the account email to register
   account_email = nil,
+  -- number of certificate cache, per type
+  cache_size = 100,
   domain_key_paths = {
     -- the global domain RSA private key
     rsa = nil,
@@ -258,10 +261,7 @@ Hashicorp [Vault](https://www.vaultproject.io/) based storage.
 
 TODO
 ====
-- autossl: Persistent the auto generated account key
-- autossl: worker level DER cache with mlcache
 - autossl: Select domain to register with whitelist/blacklist
-- autossl: move away from worker events
 - Add tests
 - client: Alternatively use lua-resty-nettle when luaossl is not available
 

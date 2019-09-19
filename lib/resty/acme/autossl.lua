@@ -1,3 +1,4 @@
+local lrucache = require "resty.lrucache"
 local acme = require "resty.acme.client"
 local util = require "resty.acme.util"
 local json = require "cjson"
@@ -5,8 +6,10 @@ local ssl = require "ngx.ssl"
 
 local log = ngx.log
 local ngx_ERR = ngx.ERR
+local ngx_WARN = ngx.WARN
 local ngx_INFO = ngx.INFO
 local ngx_DEBUG = ngx.DEBUG
+local null = ngx.null
 
 local openssl = {
   x509 = require("openssl.x509"),
@@ -24,6 +27,8 @@ local default_config = {
   account_key_path = nil,
   -- the account email to register
   account_email = nil,
+  -- number of certificate cache, per type
+  cache_size = 100,
   domain_key_paths = {
     -- the global domain RSA private key
     rsa = nil,
@@ -54,10 +59,22 @@ local domain_key_types, domain_key_types_count
 
 local ev, events
 
+--[[
+  certs_cache = {
+    rsa = {
+      example = {
+        pkey = cdata key,
+        cert = cdata cert,
+      },
+    },
+  }
+]]
+local certs_cache = {}
+
 local domain_cache_key_prefix = "domain:"
 
 local function update_cert_handler(data, event, source, pid)
-  log(ngx_INFO, "run update_cert_handler")
+  log(ngx_DEBUG, "run update_cert_handler")
 
   if not AUTOSSL.client_initialized then
     local err = AUTOSSL.client:init()
@@ -79,24 +96,20 @@ local function update_cert_handler(data, event, source, pid)
   local pkey
 
   if data.renew then
-    local serialized, err = AUTOSSL.storage:get(domain_cache_key)
+    local certkey, err = get_certkey(domain, typ)
     if err then
-      return nil, "can't renew cert, storage err: " .. err
-    elseif not serialized then
-      return nil, "can't renew cert, pkey not found in storage"
-    end
-    local deserialized = json.decode(serialized)
-    if not deserialized then
-      log(ngx_ERR, typ, " pkey not found in previous storage, creating new cert")
+      log(ngx_ERR, "failed to read ", typ, " cert for domain: ", err)
+    elseif not certkey or certkey == null then
+      log(ngx_INFO, "trying to renew ", typ, " cert for domain which does not exist, creating new one")
     else
-      pkeys = deserialized.pkey
+      pkeys = certkey.pkey
     end
   else
     -- if defined, use the global (single) domain key
     pkey = domain_pkeys[typ]
   end
 
-  log(ngx_INFO, "create ", typ, " cert for ", domain)
+  log(ngx_INFO, "order ", typ, " cert for ", domain)
 
   local pkey, cert, err = AUTOSSL.update_cert(pkey, domain, typ)
   if err then
@@ -127,7 +140,68 @@ local function update_cert_handler(data, event, source, pid)
     return
   end
 
-  -- TODO: worker events cache invalidation
+  local sucess, err = ev.post(events._source, events.cache_invalidation, {
+    domain = domain,
+    type = typ,
+  }, nil)
+  if err then
+    log(ngx_ERR, "failed to post cache invalidation event ", err)
+    return
+  end
+
+end
+
+local function cache_invalidation_handler(data, event, source, pid)
+  log(ngx_DEBUG, "run cache_invalidation_handler")
+
+  local typ = data.type
+  local domain = data.domain
+  if not typ or not domain then
+    log(ngx_WARN, "received cache_invalidation event with no type or domain defined")
+    return
+  end
+
+  certs_cache[data.type]:delete(data.domain)
+end
+
+-- get cert and key cdata with caching
+local function get_certkey(domain, typ)
+  local data, --[[stale--]]_, flags = certs_cache[typ]:get(domain)
+  if data then
+    return data, nil
+  end
+  -- pull from storage
+  local domain_cache_key = domain_cache_key_prefix .. typ .. ":" .. domain
+  local serialized, err = AUTOSSL.storage:get(domain_cache_key)
+  if err then
+    return nil, "failed to read from storage err: " .. err
+  end
+
+  if not serialized then
+    certs_cache[typ]:set(domain, null)
+    return nil, nil
+  end
+
+  local deserialized = json.decode(serialized)
+  if not deserialized then
+    return nil, "failed to deserialize cert key from storage"
+  end
+
+  local pkey, err = ssl.parse_pem_priv_key(deserialized.pkey)
+  if err then
+    return nil, "failed to parse PEM key from storage " .. err
+  end
+  local cert, err = ssl.parse_pem_cert(deserialized.cert)
+  if err then
+    return nil, "failed to parse PEM cert from storage " .. err
+  end
+  local cache = {
+    pkey = pkey,
+    cert = cert
+  }
+  -- fill in local cache
+  certs_cache[typ]:set(domain, cache)
+  return cache, nil
 end
 
 function AUTOSSL.check_renew()
@@ -141,13 +215,13 @@ function AUTOSSL.check_renew()
   for _, key in ipairs(keys) do
     local serialized, err = AUTOSSL.storage:get(key)
     if err or not serialized then
-      log(ngx_ERR, "can't renew cert, pkey not found in storage or err " .. (err or "nil"))
+      log(ngx_WARN, "failed to renew cert, expected domain not found in storage or err " .. (err or "nil"))
       goto continue
     end
 
     local deserialized = json.decode(serialized)
     if not deserialized.cert then
-      log(ngx_ERR, "cert not found in previous storage, skipping")
+      log(ngx_WARN, "failed to read existing cert from storage, skipping")
       goto continue
     end
 
@@ -167,19 +241,12 @@ function AUTOSSL.check_renew()
       elseif success == 'done' then
         log(ngx_INFO, "renewed certificate for domain ", domain)
       else -- recursive
-        log(ngx_INFO, "renewal of cert for ", domain, " is already running")
+        log(ngx_INFO, "renewal of cert for ", domain, " is already running: ", success)
       end
     end
 
 ::continue::
   end
-end
-
-
-local function cache_invalidation_handler(data, event, source, pid)
-  log(ngx_INFO, "run cache_invalidation_handler")
-
-  -- TODO
 end
 
 function AUTOSSL.init(autossl_config, acme_config)
@@ -218,6 +285,8 @@ function AUTOSSL.init(autossl_config, acme_config)
       openssl.pkey.new(domain_key_pem)
       domain_pkeys[typ] = domain_key_pem
     end
+    -- initialize worker cache table
+    certs_cache[typ] = lrucache.new(autossl_config.cache_size)
   end
 
   local client, err = acme.new(acme_config)
@@ -258,8 +327,7 @@ function AUTOSSL.init_worker()
     interval = 5,           -- poll interval (seconds)
   }
   if not ok then
-    log(ngx_ERR, "failed to initialize worker events: ", err)
-    return
+    error("failed to initialize worker events: ", err)
   end
 
   ev.register(update_cert_handler, events._source, events.update_cert)
@@ -275,6 +343,7 @@ end
 function AUTOSSL.update_cert(pkey, domain, typ)
   local pkey = pkey
   if not pkey then
+    local t = ngx.now()
     if typ == 'rsa' then
       pkey = util.create_pkey(4096, 'RSA')
     elseif typ == 'ecc' then
@@ -282,6 +351,8 @@ function AUTOSSL.update_cert(pkey, domain, typ)
     else
       return nil, nil, "unknown key type: " .. typ
     end
+    ngx.update_time()
+    log(ngx_INFO, ngx.now() - t,  "s spent in creating new ", typ, " private key")
   end
   local cert, err = AUTOSSL.client:order_certificate(pkey, domain)
   if err then
@@ -304,25 +375,21 @@ function AUTOSSL.ssl_certificate()
 
   -- TODO: worker level cache
   for i, typ in ipairs(domain_key_types) do
-    local serialized, err = AUTOSSL.storage:get(domain_cache_key_prefix .. typ .. ":" ..  domain)
+    local certkey, err = get_certkey(domain, typ)
     if err then
       log(ngx_ERR, "can't read key and cert from storage ", err)
-      return
-    end
-
-    local deserialized = serialized and json.decode(serialized)
-    if deserialized and deserialized.pkey and deserialized.cert then
+    elseif certkey == null then
+      log(ngx_DEBUG, "negative cached domain cert")
+    elseif certkey then
       if chains_set_count == 0 then
         ssl.clear_certs()
         chains_set_count = chains_set_count + 1
       end
       chains_set[i] = true
-  
+
       log(ngx_DEBUG, "set ", typ, " key for domain ", name)
-      local der_cert, err = ssl.cert_pem_to_der(deserialized.cert)
-      ssl.set_der_cert(der_cert)
-      local der_key, err = ssl.priv_key_pem_to_der(deserialized.pkey)
-      ssl.set_der_priv_key(der_key)
+      ssl.set_cert(certkey.cert)
+      ssl.set_priv_key(certkey.pkey)
     end
   end
 
@@ -341,7 +408,7 @@ function AUTOSSL.ssl_certificate()
           elseif success == 'done' then
             log(ngx_INFO, "created certificate for domain ", domain)
           else -- recursive
-            log(ngx_INFO, "creation of cert for ", domain, " is already running")
+            log(ngx_INFO, "creation of cert for ", domain, " is already running: ", success)
           end
         end
       end
@@ -353,8 +420,10 @@ end
 
 function AUTOSSL.load_account_key(filepath)
   if not filepath then
-    log(ngx_INFO, "creating new account key")
+    local t = ngx.now()
     local pkey = util.create_pkey(4096, 'RSA')
+    ngx.update_time()
+    log(ngx_INFO, ngx.now() - t,  "s spent in creating new account key")
     return pkey
   else
     local account_key_f, err = io.open(filepath)
