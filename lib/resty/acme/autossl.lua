@@ -5,7 +5,7 @@ local ssl = require "ngx.ssl"
 
 local log = ngx.log
 local ngx_ERR = ngx.ERR
-local ngx_INFO = ngx.ERR
+local ngx_INFO = ngx.INFO
 local ngx_DEBUG = ngx.DEBUG
 
 local openssl = {
@@ -50,7 +50,7 @@ local default_config = {
 local account_key
 local domain_pkeys = {}
 
-local key_types
+local domain_key_types, domain_key_types_count
 
 local ev, events
 
@@ -107,7 +107,7 @@ local function update_cert_handler(data, event, source, pid)
       local unique = domain .. "#" .. data.tries
       local _, err = ev.post(events._source, events.update_cert, data, unique)
       if err then
-        log(ngx_ERR, "can't putting back events queue ", err)
+        log(ngx_ERR, "error putting back events queue ", err)
       end
     end)
     return
@@ -154,19 +154,20 @@ function AUTOSSL.check_renew()
     local cert = openssl.x509.new(deserialized.cert)
     local _, not_after = cert:getLifetime()
     if not_after - now < AUTOSSL.config.renew_threshold then
+      local domain = deserialized.domain
       local sucess, err = ev.post(events._source, events.update_cert, {
-        domain = deserialized.domain,
+        domain = domain,
         renew = true,
         tries = 0,
         type = deserialized.type,
-      }, "renew#" .. deserialized.domain)
+      }, "renew:" .. deserialized.type .. ":" .. domain)
 
       if err then
-        log(ngx_ERR, "failed to renew certificate for domain ", name)
+        log(ngx_ERR, "failed to renew certificate for domain ", domain)
       elseif success == 'done' then
-        log(ngx_INFO, "renewed certificate for domain ", name)
+        log(ngx_INFO, "renewed certificate for domain ", domain)
       else -- recursive
-        log(ngx_INFO, "event for domain ", name, " is already running")
+        log(ngx_INFO, "renewal of cert for ", domain, " is already running")
       end
     end
 
@@ -181,7 +182,7 @@ local function cache_invalidation_handler(data, event, source, pid)
   -- TODO
 end
 
-function AUTOSSL.init(autossl_config)
+function AUTOSSL.init(autossl_config, acme_config)
   autossl_config = setmetatable(autossl_config or {}, { __index = default_config })
 
   if not autossl_config.tos_accepted then
@@ -190,7 +191,7 @@ function AUTOSSL.init(autossl_config)
     )
   end
 
-  local acme_config = {}
+  local acme_config = acme_config or {}
 
   acme_config.account_key = AUTOSSL.load_account_key(autossl_config.account_key_path)
   if autossl_config.staging then
@@ -199,9 +200,10 @@ function AUTOSSL.init(autossl_config)
   acme_config.account_email = autossl_config.account_email
 
   -- cache in global variable
-  key_types = autossl_config.key_types
+  domain_key_types = autossl_config.domain_key_types
+  domain_key_types_count = #domain_key_types
 
-  for _, typ in ipairs(key_types) do
+  for _, typ in ipairs(domain_key_types) do
     if autossl_config.domain_key_paths[typ] then
       local domain_key_f, err = io.open(autossl_config.domain_key_paths[typ])
       if err then
@@ -223,6 +225,10 @@ function AUTOSSL.init(autossl_config)
   if err then
     error(err)
   end
+
+  if not autossl_config.storage_adapter:find("resty.acme.storage.") then
+    autossl_config.storage_adapter = "resty.acme.storage." .. autossl_config.storage_adapter
+  end
   
   AUTOSSL.client = client
   AUTOSSL.client_initialized = false
@@ -231,7 +237,7 @@ end
 
 function AUTOSSL.init_worker()
   -- TODO: catch error and return gracefully
-  local storagemod = require("resty.acme.storage." .. AUTOSSL.config.storage_adapter)
+  local storagemod = require(AUTOSSL.config.storage_adapter)
   local storage, err = storagemod.new(AUTOSSL.config.storage_config)
   if err then
     error(err)
@@ -293,10 +299,11 @@ function AUTOSSL.ssl_certificate()
     return
   end
 
-  local cleared = false
+  local chains_set_count = 0
+  local chains_set = {}
 
-  -- TODO: use mlcache
-  for _, typ in ipairs(key_types) do
+  -- TODO: worker level cache
+  for i, typ in ipairs(domain_key_types) do
     local serialized, err = AUTOSSL.storage:get(domain_cache_key_prefix .. typ .. ":" ..  domain)
     if err then
       log(ngx_ERR, "can't read key and cert from storage ", err)
@@ -305,10 +312,12 @@ function AUTOSSL.ssl_certificate()
 
     local deserialized = serialized and json.decode(serialized)
     if deserialized and deserialized.pkey and deserialized.cert then
-      if not cleared then
+      if chains_set_count == 0 then
         ssl.clear_certs()
-        cleared = true
+        chains_set_count = chains_set_count + 1
       end
+      chains_set[i] = true
+  
       log(ngx_DEBUG, "set ", typ, " key for domain ", name)
       local der_cert, err = ssl.cert_pem_to_der(deserialized.cert)
       ssl.set_der_cert(der_cert)
@@ -317,21 +326,23 @@ function AUTOSSL.ssl_certificate()
     end
   end
 
-  if not cleared then
+  if domain_key_types_count ~= chains_set then
     ngx.timer.at(0, function()
-      for _, typ in ipairs(key_types) do
-        local sucess, err = ev.post(events._source, events.update_cert, {
-          domain = domain,
-          tries = 0,
-          type = typ,
-        }, typ .. ":" .. domain)
+      for i, typ in ipairs(domain_key_types) do
+        if not chains_set[i] then
+          local sucess, err = ev.post(events._source, events.update_cert, {
+            domain = domain,
+            tries = 0,
+            type = typ,
+          }, typ .. ":" .. domain)
 
-        if err then
-          log(ngx_ERR, "failed to create certificate for domain ", domain)
-        elseif success == 'done' then
-          log(ngx_INFO, "created certificate for domain ", domain)
-        else -- recursive
-          log(ngx_INFO, "event for domain ", domain, " is already running")
+          if err then
+            log(ngx_ERR, "failed to create certificate for domain ", domain)
+          elseif success == 'done' then
+            log(ngx_INFO, "created certificate for domain ", domain)
+          else -- recursive
+            log(ngx_INFO, "creation of cert for ", domain, " is already running")
+          end
         end
       end
     end)

@@ -55,14 +55,9 @@ Create account private key and fallback certs:
 
 ```shell
 # create account key
-openssl genpkey -algorithm RSA -pkeyopt rsa_keygen_bits:4096 -out /path/to/account.key
+openssl genpkey -algorithm RSA -pkeyopt rsa_keygen_bits:4096 -out /etc/openresty/account.key
 # create fallback cert and key
-openssl req -newkey rsa:2048 -nodes -keyout /path/to/default.pem -x509 -days 365 -out /path/to/default.key
-# create fallback ecc cert and key if you wish to use ecdsa
-openssl ecparam -name prime256v1 -genkey -out /path/to/default-ecc.key
-openssl req -new -sha256 -key /path/to/default-ecc.key -subj "/" -out temp.csr
-openssl x509 -req -sha256 -days 365 -in temp.csr -signkey /path/to/default-ecc.key -out /path/to/default-ecc.pem
-
+openssl req -newkey rsa:2048 -nodes -keyout /etc/openresty/default.pem -x509 -days 365 -out /etc/openresty/default.key
 ```
 
 Use the following example config:
@@ -81,11 +76,11 @@ http {
             -- setting the following to true
             -- implies that you read and accepted https://letsencrypt.org/repository/
             tos_accepted = true,
-            -- uncomment following to first time setup
+            -- uncomment following for first time setup
             -- staging = true,
             -- uncomment folloing to enable RSA + ECC double cert
             -- domain_key_types = { 'rsa', 'ecc' },
-            account_key_path = "/path/to/account.key",
+            account_key_path = "/etc/openresty/account.key",
             account_email = "youemail@youdomain.com",
         })
     }
@@ -103,12 +98,8 @@ http {
         server_name example.com;
 
         # fallback certs, make sure to create them before hand
-        ssl_certificate /path/to/default.pem;
-        ssl_certificate_key /path/to/default.key;
-
-        # fallback ECC certs, uncomment folloing to enable RSA + ECC double cert
-        # ssl_certificate /path/to/default-ecc.pem;
-        # ssl_certificate_key /path/to/default-ecc.key;
+        ssl_certificate /etc/openresty/default.pem;
+        ssl_certificate_key /etc/openresty/default.key;
 
         ssl_certificate_by_lua_block {
             require("resty.acme.autossl").ssl_certificate()
@@ -128,7 +119,7 @@ end-to-end test of your environment. This can avoid configuration failure result
 many requests that hits [rate limiting](https://letsencrypt.org/docs/rate-limits/) on Let's Encrypt API.
 
 By default `autossl` only creates RSA certificates. To use ECC certificates or both, uncomment
-`domain_key_types = { 'rsa', 'ecc' }` and the fallback ECC certs. Note that multiple certificate
+`domain_key_types = { 'rsa', 'ecc' }`. Note that multiple certificate
 chain is only supported by OpenSSL 1.1 and later, check the OpenSSL version your OpenResty
 installation is using by runing `openresty -V` first.
 
@@ -142,6 +133,7 @@ with the fallback certificate.
 A config table can be passed to `resty.acme.autossl.init()`, the default values are:
 
 ```lua
+default_config = {
   -- accept term of service https://letsencrypt.org/repository/
   tos_accepted = false,
   -- if using the let's encrypt staging API
@@ -190,7 +182,7 @@ See also [Storage Adapters](#storage-adapters) below.
 A config table can be passed to `resty.acme.client.new()`, the default values are:
 
 ```lua
-local default_config = {
+default_config = {
   -- the ACME v2 API endpoint to use
   api_uri = "https://acme-v02.api.letsencrypt.org",
   -- the account email to register
@@ -231,7 +223,7 @@ Filesystem based storage. Sample configuration:
 
 ```lua
 storage_config = {
-    dir = '/path/to/storage',
+    dir = '/etc/openresty/storage',
 }
 ```
 If `dir` is omitted, the OS temporary directory will be used.
@@ -269,6 +261,7 @@ TODO
 - autossl: Persistent the auto generated account key
 - autossl: worker level DER cache with mlcache
 - autossl: Select domain to register with whitelist/blacklist
+- autossl: move away from worker events
 - Add tests
 - client: Alternatively use lua-resty-nettle when luaossl is not available
 

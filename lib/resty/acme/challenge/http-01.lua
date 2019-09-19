@@ -1,16 +1,22 @@
-local base_challenge = require("resty.acme.challenge")
-
-local _M = base_challenge.extend()
+local _M = {}
 local mt = {__index = _M}
 
 function _M.new(storage)
   local self = setmetatable({
     -- TODO: will this ever change?
     uri_prefix = "acme-challenge",
+    storage = storage,
   }, mt)
-
-  self:set_storage(storage)
   return self
+end
+
+
+function _M:register_challenge(challenge, response)
+  return self.storage:set(challenge, response)
+end
+
+function _M:cleanup_challenge(challenge, response)
+  return self.storage:delete(challenge, response)
 end
 
 function _M:serve_challenge()

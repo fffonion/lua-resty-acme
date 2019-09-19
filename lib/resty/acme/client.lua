@@ -67,8 +67,12 @@ function _M.new(conf)
     }, mt
   )
 
+  local storage_adapter = conf.storage_adapter
   -- TODO: catch error and return gracefully
-  local storagemod = require("resty.acme.storage." .. conf.storage_adapter)
+  if not storage_adapter:find("resty.acme.storage.") then
+    storage_adapter = "resty.acme.storage." .. storage_adapter
+  end
+  local storagemod = require(storage_adapter)
   local storage, err = storagemod.new(conf.storage_config)
   if err then
     return nil, err

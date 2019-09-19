@@ -64,10 +64,11 @@ function _M:get(k)
   return res, err
 end
 
+local empty_table = {}
 function _M:keys(prefix)
   local res, err = op(self, 'keys', prefix)
   if res == ngx.null then
-    return nil, err
+    return empty_table, err
   end
   return res, err
 end
