@@ -27,15 +27,16 @@ Install using luarocks:
 luarocks install lua-resty-acme
 ```
 
-In installed using `Luarocks`, `luaossl` will be installed. Installing `luaossl` requires you to have
+When installing using `Luarocks`, `luaossl` will be installed. Installing `luaossl` requires you to have
 a working compiler toolchain and the openssl headers installed (`libssl-dev` on Ubuntu/Debian, and `openssl-devel`
 on CentOS/Fedora).
-This library also uses an FFI-based openssl backend. The FFI version *might* only work with openssl >= 1.1.
+Alternatively, this library can also run with an FFI-based openssl backend.
+The FFI version *might* only work with openssl >= 1.1.
 
 Install using opm:
 
 ```shell
-opm install lua-resty-acme
+opm install fffonion/lua-resty-acme
 ```
 
 [Back to TOC](#table-of-contents)
