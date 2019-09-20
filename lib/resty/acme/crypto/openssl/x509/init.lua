@@ -17,6 +17,9 @@ ffi.cdef [[
   void X509_free(X509 *a);
   const ASN1_TIME *X509_get0_notBefore(const X509 *x);
   const ASN1_TIME *X509_get0_notAfter(const X509 *x);
+
+  EVP_PKEY *d2i_PrivateKey_bio(BIO *bp, EVP_PKEY **a);
+  EVP_PKEY *d2i_PUBKEY_bio(BIO *bp, EVP_PKEY **a);
 ]]
 
 local _M = {}

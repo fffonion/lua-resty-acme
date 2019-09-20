@@ -343,7 +343,7 @@ function AUTOSSL.update_cert(pkey, domain, typ)
     if typ == 'rsa' then
       pkey = util.create_pkey(4096, 'RSA')
     elseif typ == 'ecc' then
-      pkey = util.create_pkey(256, 'EC', 'prime256v1')
+      pkey = util.create_pkey(nil, 'EC', 'prime256v1')
     else
       return nil, nil, "unknown key type: " .. typ
     end

@@ -35,4 +35,6 @@ ffi.cdef [[
   int EC_KEY_set_group(EC_KEY *key, const EC_GROUP *group);
   void EC_GROUP_free(EC_GROUP *group);
   int EC_KEY_generate_key(EC_KEY *key);
+
+  const BIGNUM *EC_KEY_get0_private_key(const EC_KEY *key);
 ]]
