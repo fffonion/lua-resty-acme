@@ -5,12 +5,15 @@ local ffi_gc = ffi.gc
 local ffi_new = ffi.new
 local ffi_cast = ffi.cast
 local ffi_str = ffi.string
+local null = ngx.null
 
 local evp_lib = require "resty.acme.crypto.openssl.evp"
 require "resty.acme.crypto.openssl.rsa"
+require "resty.acme.crypto.openssl.ec"
 local bn_lib = require "resty.acme.crypto.openssl.bn"
 require "resty.acme.crypto.openssl.bio"
 require "resty.acme.crypto.openssl.pem"
+local util = require "resty.acme.crypto.openssl.util"
 
 local function generate_key(config)
   local ctx = C.EVP_PKEY_new()
@@ -31,6 +34,7 @@ local function generate_key(config)
     C.BN_set_word(exp, config.exp or 65537)
     local rsa = C.RSA_new()
     if rsa == nil then
+      C.BN_free(exp)
       return nil, "RSA_new() failed"
     end
     code = C.RSA_generate_key_ex(rsa, bits, exp, nil)
@@ -50,8 +54,37 @@ local function generate_key(config)
       return nil, "error in " .. failure
     end
   elseif type == "EC" then
+    local curve = config.curve or 'prime192v1'
+    local nid = C.OBJ_ln2nid(curve)
+    if nid == 0 then
+      return nil, "unknown curve " .. curve
+    end
+    local group = C.EC_GROUP_new_by_curve_name(nid)
+    if not group then
+      return nil, "EC_GROUP_new_by_curve_name() failed"
+    end
+    -- # define OPENSSL_EC_NAMED_CURVE     0x001
+    C.EC_GROUP_set_asn1_flag(group, 1)
+    C.EC_GROUP_set_point_conversion_form(group, C.POINT_CONVERSION_UNCOMPRESSED)
+    local key = C.EC_KEY_new()
+    if not key then
+      C.EC_GROUP_free(group)
+      return nil, "EC_KEY_new() failed"
+    end
+
+    C.EC_KEY_set_group(key, group);
+    C.EC_GROUP_free(group)
+
+    local code = C.EC_KEY_generate_key(key)
+    if code == 0 then
+			C.EC_KEY_free(key);
+			return nil, "EC_KEY_generate_key() failed"
+		end
+
+    C.EVP_PKEY_set1_EC_KEY(ctx, key)
+		C.EC_KEY_free(key);
   else
-    return nil, "unknown type " .. (type or "nil")
+    return nil, "unsupported type " .. type
   end
 
   return ctx, nil
@@ -79,31 +112,26 @@ local function load_pkey(txt)
 
 end
 
-local function tostring(self, priv_or_public, format)
-  local bio_method = C.BIO_s_mem()
-  if not bio_method then
-    return nil, "BIO_s_mem() failed"
-  end
-  local bio = C.BIO_new(bio_method)
-  ffi_gc(bio, C.BIO_free)
+local PEM_write_bio_PrivateKey_args = { null, null, 0, null, null }
+local PEM_write_bio_PUBKEY_args = {}
 
-  -- BIO_reset; #define BIO_CTRL_RESET 1
-  local code = C.BIO_ctrl(bio, 1, 0, nil)
-  if code ~= 1 then
-    return nil, "BIO_ctrl() failed"
-  end
-
-  local code = C.PEM_write_bio_PrivateKey(bio, self.ctx, nil, nil, 0, nil, nil)
-  if code ~= 1 then
-    return nil, "PEM_write_bio_PrivateKey() failed"
+local function tostring(self, fmt)
+  local method
+  if fmt == 'private' or fmt == 'PrivateKey' then
+    method = 'PEM_write_bio_PrivateKey'
+  elseif not fmt or fmt == 'public' or fmt == 'PublicKey' then
+    method = 'PEM_write_bio_PUBKEY'
+  else
+    return nil, "can only export private or public key, not " .. priv_or_public
   end
 
-  local buf = ffi_new("char *[1]")
- 
-  -- BIO_get_mem_data; #define BIO_CTRL_INFO 3
-  local length = C.BIO_ctrl(bio, 3, 0, buf)
-
-  return ffi.string(buf[0], length)
+  local args
+  if method == 'PEM_write_bio_PrivateKey' then
+    args = PEM_write_bio_PrivateKey_args
+  else
+    args = PEM_write_bio_PUBKEY_args
+  end
+  return util.read_using_bio(method, self.ctx, unpack(args))
 end
 
 local _M = {}
@@ -147,7 +175,7 @@ local function get_rsa_params(pkey)
   if not rsa_st then
     return nil, "EVP_PKEY_get0_RSA() failed"
   end
-  --rsa_st = ffi_cast("RSA*", rsa_st)
+
   return setmetatable(empty_table, {
     __index = function(tbl, k)
       if k == 'n' then
@@ -158,6 +186,10 @@ local function get_rsa_params(pkey)
         local bnptr = bnptr_type()
         C.RSA_get0_key(rsa_st, nil, bnptr, nil)
         return bn_lib.new(bnptr[0]), nil
+      elseif k == 'd' then
+        local bnptr = bnptr_type()
+        C.RSA_get0_key(rsa_st, nil, nil, bnptr)
+        return bn_lib.new(bnptr[0]), nil
       end
     end
   }), nil
@@ -167,8 +199,8 @@ function _M:getParameters()
   local key_type = C.EVP_PKEY_base_id(self.ctx)
   if key_type == evp_lib.EVP_PKEY_RSA then
     return get_rsa_params(self.ctx)
-  elseif key_type == evp_lib.EVP_PKEY_DH then
   elseif key_type == evp_lib.EVP_PKEY_EC then
+    return nil, "parameters of EC not supported"
   end
 
   return nil, "key type not supported"
@@ -194,7 +226,7 @@ function _M:verify(signature, digest)
 end
 
 function _M:toPEM(pub_or_priv)
-  return tostring(self)
+  return tostring(self, pub_or_priv)
 end
 
 return _M

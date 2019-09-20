@@ -13,5 +13,3 @@ require "resty.acme.crypto.openssl.ossl_typ"
 ffi.cdef [[
   typedef struct GENERAL_NAME_st GENERAL_NAME
 ]]
-
-

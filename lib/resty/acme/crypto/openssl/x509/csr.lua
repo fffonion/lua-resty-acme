@@ -10,6 +10,7 @@ local mt = {__index = _M}
 require "resty.acme.crypto.openssl.ossl_typ"
 require "resty.acme.crypto.openssl.evp"
 require "resty.acme.crypto.openssl.objects"
+local util = require "resty.acme.crypto.openssl.util"
 
 ffi.cdef [[
   X509_REQ *X509_REQ_new(void);
@@ -21,40 +22,17 @@ ffi.cdef [[
 
   int i2d_X509_REQ_bio(BIO *bp, X509_REQ *req);
 ]]
-local tostring_method = {
-  PEM = 'PEM_write_bio_X509_REQ',
-  DER = 'i2d_X509_REQ_bio',
-}
+
 local function tostring(self, fmt)
-  local bio_method = C.BIO_s_mem()
-  if not bio_method then
-    return nil, "BIO_s_mem() failed"
+  local method
+  if not fmt or fmt == 'PEM' then
+    method = 'PEM_write_bio_X509_REQ'
+  elseif fmt == 'DER' then
+    method = 'i2d_X509_REQ_bio'
+  else
+    return nil, "can only write PEM or DER format, not " .. fmt
   end
-  local bio = C.BIO_new(bio_method)
-  ffi_gc(bio, C.BIO_free)
-
-  -- BIO_reset; #define BIO_CTRL_RESET 1
-  local code = C.BIO_ctrl(bio, 1, 0, nil)
-  if code ~= 1 then
-    return nil, "BIO_ctrl() failed"
-  end
-
-  local code
-  local method = tostring_method[fmt or 'PEM']
-  if not method then
-    return nil, "format " .. fmt .. " not supported"
-  end
-  local code = C[method](bio, self.ctx)
-  if code ~= 1 then
-    return nil, method .. " () failed"
-  end
-
-  local buf = ffi_new("char *[1]")
- 
-  -- BIO_get_mem_data; #define BIO_CTRL_INFO 3
-  local length = C.BIO_ctrl(bio, 3, 0, buf)
-
-  return ffi.string(buf[0], length)
+  return util.read_using_bio(method, self.ctx)
 end
 
 local _M = {}

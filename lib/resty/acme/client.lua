@@ -148,9 +148,9 @@ function _M:jws(url, payload)
   -- TODO: much better handling
   if payload.contact then
     -- self.account.thumbprint = ngx.encode_base64(tdigest)
-    local params = self.account_pkey:getParameters()
+    local params, err = self.account_pkey:getParameters()
     if not params then
-      return nil, "can't get parameters from account key"
+      return nil, "can't get parameters from account key: " .. (err or "nil")
     end
 
     jws.protected.jwk = {

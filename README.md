@@ -266,7 +266,6 @@ TODO
 - Add tests
 
 - .new only supports PEM
-- create_key support ECC
 - gc
 
 [Back to TOC](#table-of-contents)

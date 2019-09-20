@@ -12,7 +12,7 @@ local mt = {__index = _M}
 require "resty.acme.crypto.openssl.ossl_typ"
 
 local BN_ULONG
-if true then
+if ffi.abi('64bit') then
   BN_ULONG = 'unsigned long long'
 else -- 32bit
   BN_ULONG = 'unsigned int'
@@ -37,12 +37,18 @@ ffi.cdef(
   int BN_num_bits(const BIGNUM *a);
   int BN_bn2bin(const BIGNUM *a, unsigned char *to);
 ]]
--- BN_num_bytes, BN_bn2bin
 )
 
 function _M.new(bn)
-  local bn = bn or C.BN_new()
-  return setmetatable( { bn = bn }, mt)
+  local _bn
+  if not bn then
+    _bn = C.BN_new()
+    ffi_gc(bn, C.BN_free)
+  else
+    _bn = bn
+  end
+
+  return setmetatable( { bn = _bn }, mt)
 end
 
 function _M:toBinary()
@@ -51,7 +57,7 @@ function _M:toBinary()
   local buf = ffi_new('unsigned char[?]', length)
   local code = C.BN_bn2bin(self.bn, buf)
   buf = ffi_str(buf, length)
-  return buf, nil
+  return buf
 end
 
 return _M

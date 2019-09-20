@@ -24,5 +24,6 @@ ffi.cdef(
   typedef struct asn1_string_st ASN1_TIME;
   typedef struct asn1_string_st ASN1_STRING;
   typedef struct asn1_object_st ASN1_OBJECT;
+  typedef struct ec_key_st EC_KEY;
 ]])
 

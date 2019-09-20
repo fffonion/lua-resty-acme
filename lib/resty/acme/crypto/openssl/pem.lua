@@ -17,10 +17,9 @@ ffi.cdef [[
   int PEM_write_bio_PrivateKey(BIO *bp, EVP_PKEY *x, const EVP_CIPHER *enc,
     unsigned char *kstr, int klen,
     pem_password_cb *cb, void *u);
+  int PEM_write_bio_PUBKEY(BIO *bp, EVP_PKEY *x);
 
   int PEM_write_bio_X509_REQ(BIO *bp, X509_REQ *x);
   
   X509 *PEM_read_bio_X509(BIO *bp, X509 **x, pem_password_cb *cb, void *u);
 ]]
-
-
