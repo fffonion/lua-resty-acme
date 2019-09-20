@@ -23,18 +23,19 @@ This library consits of two parts:
 
 Dependencies:
 - lua-resty-http
-- luaossl
 
 ```shell
 luarocks install lua-resty-http
-luarocks install luaossl
 ```
 
-Installing `luaossl` requires you to have a working compiler toolchain and the openssl headers installed
-(`libssl-dev` on Ubuntu/Debian, and `openssl-devel` on CentOS/Fedora).
+This library uses an FFI-based openssl backend. The FFI version *might* only work with openssl >= 1.1.
+Alternatively you can also use `luaossl`. Installing `luaossl` requires you to have a working compiler
+toolchain and the openssl headers installed (`libssl-dev` on Ubuntu/Debian, and `openssl-devel`
+on CentOS/Fedora).
 
 Also, if you are using `resty.acme.autossl`, two dependencies
-[Kong/lua-resty-worker-events](https://github.com/Kong/lua-resty-worker-events) and [openresty/lua-resty-lrucache](https://github.com/openresty/lua-resty-lrucache) is needed to handle
+[Kong/lua-resty-worker-events](https://github.com/Kong/lua-resty-worker-events) and
+[openresty/lua-resty-lrucache](https://github.com/openresty/lua-resty-lrucache) is needed to handle
 certificate creation and cache invalidation.
 
 ```shell
@@ -263,7 +264,10 @@ TODO
 ====
 - autossl: Select domain to register with whitelist/blacklist
 - Add tests
-- client: Alternatively use lua-resty-nettle when luaossl is not available
+
+- .new only supports PEM
+- create_key support ECC
+- gc
 
 [Back to TOC](#table-of-contents)
 

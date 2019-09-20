@@ -1,10 +1,4 @@
-local openssl = {
-  pkey = require("openssl.pkey"),
-  name = require("openssl.x509.name"),
-  altname = require("openssl.x509.altname"),
-  csr = require("openssl.x509.csr"),
-  digest = require("openssl.digest")
-}
+local openssl = require("resty.acme.crypto.openssl")
 
 -- https://tools.ietf.org/html/rfc8555 Page 10
 -- Binary fields in the JSON objects used by _M are encoded using
@@ -41,15 +35,15 @@ local function create_csr(domain_pkey, ...)
   local subject = openssl.name.new()
   subject:add("CN", domains[1])
 
-  local alt = openssl.altname.new()
+  --[[local alt = openssl.altname.new()
 
   for _, domain in pairs(domains) do
     alt:add("DNS", domain)
-  end
+  end]]--
 
   local csr = openssl.csr.new()
   csr:setSubject(subject)
-  csr:setSubjectAlt(alt)
+  --csr:setSubjectAlt(alt)
 
   csr:setPublicKey(domain_pkey)
   csr:sign(domain_pkey)

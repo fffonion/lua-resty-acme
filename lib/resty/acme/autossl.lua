@@ -1,6 +1,7 @@
 local lrucache = require "resty.lrucache"
 local acme = require "resty.acme.client"
 local util = require "resty.acme.util"
+local openssl = require("resty.acme.crypto.openssl")
 local json = require "cjson"
 local ssl = require "ngx.ssl"
 
@@ -10,11 +11,6 @@ local ngx_WARN = ngx.WARN
 local ngx_INFO = ngx.INFO
 local ngx_DEBUG = ngx.DEBUG
 local null = ngx.null
-
-local openssl = {
-  x509 = require("openssl.x509"),
-  pkey = require("openssl.pkey"),
-}
 
 local AUTOSSL = {}
 

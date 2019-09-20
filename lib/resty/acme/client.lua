@@ -1,17 +1,9 @@
 local http = require("resty.http")
 local json = require("cjson")
 local util = require("resty.acme.util")
+local openssl = require("resty.acme.crypto.openssl")
 
 local base64_urlencode = util.base64_urlencode
-
-local openssl = {
-  pkey = require("openssl.pkey"),
-  x509 = require("openssl.x509"),
-  name = require("openssl.x509.name"),
-  altname = require("openssl.x509.altname"),
-  csr = require("openssl.x509.csr"),
-  digest = require("openssl.digest")
-}
 
 local log = ngx.log
 local ngx_ERR = ngx.ERR
@@ -401,7 +393,10 @@ function _M:order_certificate(domain_key, ...)
 
   local domain_pkey = openssl.pkey.new(domain_key)
 
-  local csr = util.create_csr(domain_pkey, ...)
+  local csr, err = util.create_csr(domain_pkey, ...)
+  if err then
+    return nil, err
+  end
 
   local cert, err = self:finalize(finalize_url, csr)
   if err then
