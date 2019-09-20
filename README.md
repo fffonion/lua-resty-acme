@@ -21,26 +21,21 @@ This library consits of two parts:
 - `resty.acme.autossl`: automatic lifecycle management of Let's Encrypt certificates
 - `resty.acme.client`: Lua implementation of ACME v2 protocol
 
-Dependencies:
-- lua-resty-http
+Install using luarocks:
 
 ```shell
-luarocks install lua-resty-http
+luarocks install lua-resty-acme
 ```
 
-This library uses an FFI-based openssl backend. The FFI version *might* only work with openssl >= 1.1.
-Alternatively you can also use `luaossl`. Installing `luaossl` requires you to have a working compiler
-toolchain and the openssl headers installed (`libssl-dev` on Ubuntu/Debian, and `openssl-devel`
+In installed using `Luarocks`, `luaossl` will be installed. Installing `luaossl` requires you to have
+a working compiler toolchain and the openssl headers installed (`libssl-dev` on Ubuntu/Debian, and `openssl-devel`
 on CentOS/Fedora).
+This library also uses an FFI-based openssl backend. The FFI version *might* only work with openssl >= 1.1.
 
-Also, if you are using `resty.acme.autossl`, two dependencies
-[Kong/lua-resty-worker-events](https://github.com/Kong/lua-resty-worker-events) and
-[openresty/lua-resty-lrucache](https://github.com/openresty/lua-resty-lrucache) is needed to handle
-certificate creation and cache invalidation.
+Install using opm:
 
 ```shell
-luarocks install lua-resty-worker-events
-luarocks install lua-resty-lrucache
+opm install lua-resty-acme
 ```
 
 [Back to TOC](#table-of-contents)

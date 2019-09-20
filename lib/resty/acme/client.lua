@@ -10,7 +10,9 @@ local ngx_ERR = ngx.ERR
 local ngx_INFO = ngx.INFO
 local ngx_DEBUG = ngx.DEBUG
 
-local _M = {}
+local _M = {
+  _VERSION = '0.1.0'
+}
 local mt = {__index = _M}
 
 local default_config = {
