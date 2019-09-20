@@ -80,6 +80,7 @@ http {
             -- domain_key_types = { 'rsa', 'ecc' },
             account_key_path = "/etc/openresty/account.key",
             account_email = "youemail@youdomain.com",
+            domain_whitelist = { "example.com" },
         })
     }
     init_worker_by_lua_block {
@@ -122,9 +123,22 @@ chain is only supported by OpenSSL 1.1 and later, check the OpenSSL version your
 installation is using by runing `openresty -V` first.
 
 A certificate will be *queued* to create after Nginx seen request with such SNI, which might
-take tens of seconds to finish. During the meatime, requests with such SNI are responsed
+take tens of seconds to finish. During the meantime, requests with such SNI are responsed
 with the fallback certificate.
 
+Note that `domain_whitelist` must be set to include your domain that you wish to server autossl, to
+prevent potential abusing using fake SNI in SSL handshake.
+```lua
+domain_whitelist = { "domain1.com", "domain2.com", "domain3.com" },
+```
+
+To match a pattern in your domain name, for  example all subdomains under `example.com`, use:
+
+```lua
+domain_whitelist = setmetatable({}, { __index = function(_, k)
+    return ngx.re.match(k, [[\.example\.com$]], "jo")
+end}),
+```
 
 ## resty.acme.autossl
 
@@ -151,6 +165,8 @@ default_config = {
   -- the private key algorithm to use, can be one or both of
   -- 'rsa' and 'ecc'
   domain_key_types = { 'rsa' },
+  -- restrict registering new cert only with domain defined in this table
+  domain_whitelist = nil,
   -- the threshold to renew a cert before it expires, in seconds
   renew_threshold = 7 * 86400,
   -- interval to check cert renewal, in seconds
@@ -258,7 +274,8 @@ Hashicorp [Vault](https://www.vaultproject.io/) based storage.
 
 TODO
 ====
-- autossl: Select domain to register with whitelist/blacklist
+- autossl: ocsp staping
+- storage: implement ttl?
 - Add tests
 - openssl: add check for pkey has privkey
 - openssl: add check for self.ctx classmethod call

@@ -34,6 +34,8 @@ local default_config = {
   -- the private key algorithm to use, can be one or both of
   -- 'rsa' and 'ecc'
   domain_key_types = { 'rsa' },
+  -- restrict registering new cert only with domain defined in this table
+  domain_whitelist = nil,
   -- the threshold to renew a cert before it expires, in seconds
   renew_threshold = 7 * 86400,
   -- interval to check cert renewal, in seconds
@@ -52,16 +54,14 @@ local account_key
 local domain_pkeys = {}
 
 local domain_key_types, domain_key_types_count
+local domain_whitelist
 
 local ev, events
 
 --[[
   certs_cache = {
     rsa = {
-      example = {
-        pkey = cdata key,
-        cert = cdata cert,
-      },
+      LRUCACHE
     },
   }
 ]]
@@ -265,6 +265,13 @@ function AUTOSSL.init(autossl_config, acme_config)
   -- cache in global variable
   domain_key_types = autossl_config.domain_key_types
   domain_key_types_count = #domain_key_types
+  domain_whitelist = autossl_config.domain_whitelist
+  if domain_whitelist then
+    -- convert array part to map for better searching performance
+    for _, w in ipairs(domain_whitelist) do
+      domain_whitelist[w] = true
+    end
+  end
 
   for _, typ in ipairs(domain_key_types) do
     if autossl_config.domain_key_paths[typ] then
@@ -363,6 +370,10 @@ function AUTOSSL.ssl_certificate()
 
   if err or not domain then
     log(ngx_INFO, "ignore domain ", domain, ", err: ", err)
+    return
+  end
+  if domain_whitelist and not domain_whitelist[domain] then
+    log(ngx_INFO, "domain ", domain, " not in whitelist, skipping")
     return
   end
 
