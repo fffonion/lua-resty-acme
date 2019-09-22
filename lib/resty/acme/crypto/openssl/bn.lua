@@ -41,14 +41,22 @@ ffi.cdef(
 
 function _M.new(bn)
   local _bn
-  if not bn then
+  if not bn or type(bn) == 'number'then
     _bn = C.BN_new()
+    if type(bn) == 'number' then
+      if C.BN_set_word(_bn, bn) ~= 1 then
+        C.BN_free(bn)
+        return nil, "BN_set_word() failed"
+      end
+    end
     ffi_gc(bn, C.BN_free)
-  else
+  elseif type(bn) == 'cdata' then
     _bn = bn
+  else
+    return nil, "unexpected initializer passed in (got " .. type(bn) .. ")"
   end
 
-  return setmetatable( { bn = _bn }, mt)
+  return setmetatable( { bn = _bn }, mt), nil
 end
 
 function _M:toBinary()

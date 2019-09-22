@@ -25,6 +25,7 @@ ffi.cdef [[
 local _M = {}
 local mt = { __index = _M, __tostring = tostring }
 
+-- only PEM format is supported for now
 function _M.new(cert)
   local bio = C.BIO_new_mem_buf(cert, #cert)
   if not bio then
@@ -46,7 +47,7 @@ function _M.new(cert)
   return self, nil
 end
 
--- stealed from https://github.com/wahern/luaossl/blob/master/src/openssl.c
+-- https://github.com/wahern/luaossl/blob/master/src/openssl.c
 function isleap(year)
 	return (year % 4) == 0 and ((year % 100) > 0 or (year % 400) == 0)
 end

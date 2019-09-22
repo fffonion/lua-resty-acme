@@ -10,6 +10,7 @@ local mt = {__index = _M}
 require "resty.acme.crypto.openssl.ossl_typ"
 require "resty.acme.crypto.openssl.evp"
 require "resty.acme.crypto.openssl.objects"
+local stack_lib = require "resty.acme.crypto.openssl.stack"
 local util = require "resty.acme.crypto.openssl.util"
 
 ffi.cdef [[
@@ -18,9 +19,24 @@ ffi.cdef [[
 
   int X509_REQ_set_subject_name(X509_REQ *req, X509_NAME *name);
   int X509_REQ_set_pubkey(X509_REQ *x, EVP_PKEY *pkey);
+  int X509_add1_ext_i2d(X509 *x, int nid, void *value, int crit,
+                      unsigned long flags);
+  int X509_REQ_get_attr_count(const X509_REQ *req);
+
   int X509_REQ_sign(X509_REQ *x, EVP_PKEY *pkey, const EVP_MD *md);
 
   int i2d_X509_REQ_bio(BIO *bp, X509_REQ *req);
+
+  // STACK_OF(X509_EXTENSION)
+  OPENSSL_STACK *X509_REQ_get_extensions(X509_REQ *req);
+  // STACK_OF(X509_EXTENSION)
+  int X509_REQ_add_extensions(X509_REQ *req, OPENSSL_STACK *exts);
+
+  typedef struct X509_extension_st X509_EXTENSION;
+  X509_EXTENSION *X509_EXTENSION_new(void);
+  X509_EXTENSION *X509_EXTENSION_dup(X509_EXTENSION *a);
+  void X509_EXTENSION_free(X509_EXTENSION *a);
+
 ]]
 
 local function tostring(self, fmt)
@@ -60,7 +76,40 @@ function _M:setSubject(name)
   end
 end
 
+local X509_EXTENSION_stack_gc = stack_lib.gc_of("X509_EXTENSION")
+local stack_ptr_type = ffi.typeof("struct stack_st *[1]")
+
+-- https://github.com/wahern/luaossl/blob/master/src/openssl.c
+local function xr_modifyRequestedExtension(csr, target_nid, value, crit, flags)
+  local has_attrs = C.X509_REQ_get_attr_count(csr)
+  if has_attrs > 0 then
+    return "X509_REQ already has more than more attributes" ..
+          "modifying is currently not supported"
+  end
+
+  local sk = stack_ptr_type()
+  sk[0] = C.X509_REQ_get_extensions(csr)
+  if not sk[0] then
+    return "X509_REQ_get_extensions() failed"
+  end
+  ffi_gc(sk[0], X509_EXTENSION_stack_gc)
+
+	if C.X509V3_add1_i2d(sk, target_nid, value, crit, flags) ~= 1 then
+    return "X509V3_add1_i2d() failed"
+  end
+	if C.X509_REQ_add_extensions(csr, sk[0]) == 0 then
+    return "X509_REQ_add_extensions() failed"
+  end
+
+end
+
 function _M:setSubjectAlt(alt)
+  -- #define NID_subject_alt_name            85
+  -- #define X509V3_ADD_REPLACE              2L
+  local code = xr_modifyRequestedExtension(self.ctx, 85, alt.ctx, 0, 2)
+  if code ~= 1 then
+    return "X509_add1_ext_i2d() failed"
+  end
 end
 
 function _M:setPublicKey(pkey)

@@ -35,15 +35,20 @@ local function create_csr(domain_pkey, ...)
   local subject = openssl.name.new()
   subject:add("CN", domains[1])
 
-  --[[local alt = openssl.altname.new()
+  local alt
+  if #{...} > 1 then
+    alt = openssl.altname.new()
 
-  for _, domain in pairs(domains) do
-    alt:add("DNS", domain)
-  end]]--
+    for _, domain in pairs(domains) do
+      alt:add("DNS", domain)
+    end
+  end
 
   local csr = openssl.csr.new()
   csr:setSubject(subject)
-  --csr:setSubjectAlt(alt)
+  if alt then
+    csr:setSubjectAlt(alt)
+  end
 
   csr:setPublicKey(domain_pkey)
   csr:sign(domain_pkey)

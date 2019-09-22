@@ -279,7 +279,6 @@ TODO
 - Add tests
 - openssl: add check for pkey has privkey
 - openssl: add check for self.ctx classmethod call
-- openssl: altname/safestack
 
 [Back to TOC](#table-of-contents)
 
