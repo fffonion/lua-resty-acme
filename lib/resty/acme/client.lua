@@ -3,7 +3,7 @@ local json = require("cjson")
 local util = require("resty.acme.util")
 local openssl = require("resty.acme.crypto.openssl")
 
-local base64_urlencode = util.base64_urlencode
+local encode_base64url = util.encode_base64url
 
 local log = ngx.log
 local ngx_ERR = ngx.ERR
@@ -149,16 +149,15 @@ function _M:jws(url, payload)
 
   -- TODO: much better handling
   if payload.contact then
-    -- self.account.thumbprint = ngx.encode_base64(tdigest)
     local params, err = self.account_pkey:getParameters()
     if not params then
       return nil, "can't get parameters from account key: " .. (err or "nil")
     end
 
     jws.protected.jwk = {
-      e = base64_urlencode(params.e:toBinary()),
+      e = encode_base64url(params.e:toBinary()),
       kty = "RSA",
-      n = base64_urlencode(params.n:toBinary())
+      n = encode_base64url(params.n:toBinary())
     }
   elseif not self.account_kid then
     return nil, "account_kid is not defined, provide via config or create account first"
@@ -168,11 +167,11 @@ function _M:jws(url, payload)
 
   log(ngx_DEBUG, "jws payload: ", json.encode(jws))
 
-  jws.protected = base64_urlencode(json.encode(jws.protected))
-  jws.payload = base64_urlencode(json.encode(payload))
+  jws.protected = encode_base64url(json.encode(jws.protected))
+  jws.payload = encode_base64url(json.encode(payload))
   local digest = openssl.digest.new("SHA256")
   digest:update(jws.protected .. "." .. jws.payload)
-  jws.signature = base64_urlencode(self.account_pkey:sign(digest))
+  jws.signature = encode_base64url(self.account_pkey:sign(digest))
 
   return json.encode(jws)
 end
@@ -288,7 +287,7 @@ end
 function _M:finalize(finalize_url, csr)
   local httpc = new_httpc()
   local payload = {
-    csr = base64_urlencode(csr)
+    csr = encode_base64url(csr)
   }
 
   local resp, headers, err = self:post(finalize_url, payload)
@@ -302,7 +301,8 @@ function _M:finalize(finalize_url, csr)
   end
 
   if not resp.certificate then
-    return nil, "no certificate object returned"
+    log(ngx_DEBUG, json.encode(resp))
+    return nil, "no certificate object returned " .. (resp.detail or "")
   end
 
   local resp, err = httpc:request_uri(resp.certificate)

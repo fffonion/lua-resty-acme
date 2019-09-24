@@ -27,13 +27,17 @@ local mt = { __index = _M, __tostring = tostring }
 
 -- only PEM format is supported for now
 function _M.new(cert)
+  if type(cert) ~= "string" then
+    return nil, "expect a string at #1"
+  end
   local bio = C.BIO_new_mem_buf(cert, #cert)
-  if not bio then
+  if bio == nil then
     return nil, "BIO_new_mem_buf() failed"
   end
 
   local ctx = C.PEM_read_bio_X509(bio, nil, nil, nil)
-  if not ctx then
+  if ctx == nil then
+    C.BIO_free(bio)
     return nil, "PEM_read_bio_X509() failed"
   end
 
@@ -48,7 +52,7 @@ function _M.new(cert)
 end
 
 -- https://github.com/wahern/luaossl/blob/master/src/openssl.c
-function isleap(year)
+local function isleap(year)
 	return (year % 4) == 0 and ((year % 100) > 0 or (year % 400) == 0)
 end
 
@@ -89,12 +93,12 @@ end
 function _M:getLifetime()
   local err
   local not_before = C.X509_get0_notBefore(self.ctx)
-  if not not_before then
+  if not_before == nil then
     return nil, nil, "X509_get_notBefore() failed"
   end
   not_before = asn1_to_unix(not_before)
   local not_after = C.X509_get0_notAfter(self.ctx)
-  if not not_after then
+  if not_after == nil then
     return nil, nil, "X509_get_notAfter() failed"
   end
   not_after = asn1_to_unix(not_after)

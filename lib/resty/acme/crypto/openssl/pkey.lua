@@ -16,9 +16,11 @@ require "resty.acme.crypto.openssl.pem"
 local util = require "resty.acme.crypto.openssl.util"
 require "resty.acme.crypto.openssl.x509"
 
+local OPENSSL_11 = require("resty.acme.crypto.openssl.version").OPENSSL_11
+
 local function generate_key(config)
   local ctx = C.EVP_PKEY_new()
-  if not ctx then
+  if ctx == nil then
     return nil, "EVP_PKEY_new() failed"
   end
 
@@ -64,14 +66,14 @@ local function generate_key(config)
       return nil, "unknown curve " .. curve
     end
     local group = C.EC_GROUP_new_by_curve_name(nid)
-    if not group then
+    if group == nil then
       return nil, "EC_GROUP_new_by_curve_name() failed"
     end
     -- # define OPENSSL_EC_NAMED_CURVE     0x001
     C.EC_GROUP_set_asn1_flag(group, 1)
     C.EC_GROUP_set_point_conversion_form(group, C.POINT_CONVERSION_UNCOMPRESSED)
     local key = C.EC_KEY_new()
-    if not key then
+    if key == nil then
       C.EC_GROUP_free(group)
       return nil, "EC_KEY_new() failed"
     end
@@ -94,40 +96,41 @@ local function generate_key(config)
   return ctx, nil
 end
 
+local load_pkey_try_args_pem = { null, null, null }
+local load_pkey_try_args_der = { null }
+
 local load_pkey_try_funcs = {
   PEM = {
     -- Note: make sure we always try load priv key first
     pr = {
-      'PEM_read_bio_PrivateKey'
+      ['PEM_read_bio_PrivateKey'] = load_pkey_try_args_pem,
     },
     pu = {
-      'PEM_read_bio_PUBKEY'
+      ['PEM_read_bio_PUBKEY'] = load_pkey_try_args_pem,
     },
   },
   DER = {
     pr = {
-      'd2i_PrivateKey_bio'
+      ['d2i_PrivateKey_bio'] = load_pkey_try_args_der,
     },
     pu = {
-      'd2i_PUBKEY_bio'
+      ['d2i_PUBKEY_bio'] = load_pkey_try_args_der,
     },
   }
 }
-
 -- populate * funcs
 local all_funcs = {}
 local typ_funcs = {}
 for fmt, ffs in pairs(load_pkey_try_funcs) do
   local funcs = {}
   for typ, fs in pairs(ffs) do
-    for _, f in ipairs(fs) do
-      funcs[#funcs+1] = f
-      all_funcs[#all_funcs+1] = f
+    for f, arg in pairs(fs) do
+      funcs[f] = arg
+      all_funcs[f] = arg
       if not typ_funcs[typ] then
-        typ_funcs[typ] = {f}
-      else
-        typ_funcs[typ][#typ_funcs[typ]+1] = f
+        typ_funcs[typ] = {}
       end
+      typ_funcs[typ] = arg
     end
   end
   load_pkey_try_funcs[fmt]["*"] = funcs
@@ -150,7 +153,7 @@ local function load_pkey(txt, fmt, typ)
   end
 
   local bio = C.BIO_new_mem_buf(txt, #txt)
-  if not bio then
+  if bio == nil then
     return "BIO_new_mem_buf() failed"
   end
   ffi_gc(bio, C.BIO_free)
@@ -158,22 +161,22 @@ local function load_pkey(txt, fmt, typ)
   local ctx
 
   local fs = load_pkey_try_funcs[fmt][typ]
-  for _, f in ipairs(fs) do
+  for f, arg in pairs(fs) do
     -- #define BIO_CTRL_RESET 1
     local code = C.BIO_ctrl(bio, 1, 0, nil)
     if code ~= 1 then
       return nil, "BIO_ctrl() failed"
     end
 
-    ctx = C[f](bio, nil, nil, nil)
-    if ctx then
+    ctx = C[f](bio, unpack(arg))
+    if ctx ~= nil then
       ngx.log(ngx.DEBUG, "loaded pkey using ", f)
       break
     end
   end
 
-  if not ctx then
-    return nil, "load key failed, tried " .. table.concat(fs, ", ")
+  if ctx == nil then
+    return nil, "load key failed, fmt: " .. fmt .. ", type: " .. typ
   end
   return ctx, nil
 end
@@ -188,7 +191,7 @@ local function tostring(self, fmt)
   elseif not fmt or fmt == 'public' or fmt == 'PublicKey' then
     method = 'PEM_write_bio_PUBKEY'
   else
-    return nil, "can only export private or public key, not " .. priv_or_public
+    return nil, "can only export private or public key, not " .. fmt
   end
 
   local args
@@ -242,10 +245,10 @@ end
 
 local empty_table = {}
 local bnptr_type = ffi.typeof("const BIGNUM *[1]")
-local function get_rsa_params(pkey)
+local function get_rsa_params_11(pkey)
   -- {"n", "e", "d", "p", "q", "dmp1", "dmq1", "iqmp"}
   local rsa_st = C.EVP_PKEY_get0_RSA(pkey)
-  if not rsa_st then
+  if rsa_st == nil then
     return nil, "EVP_PKEY_get0_RSA() failed"
   end
 
@@ -268,10 +271,30 @@ local function get_rsa_params(pkey)
   }), nil
 end
 
+local function get_rsa_params_10(pkey)
+  -- {"n", "e", "d", "p", "q", "dmp1", "dmq1", "iqmp"}
+
+  return setmetatable(empty_table, {
+    __index = function(tbl, k)
+      if k == 'n' then
+        return bn_lib.new(pkey.pkey.rsa.n), nil
+      elseif k == 'e' then
+        return bn_lib.new(pkey.pkey.rsa.e), nil
+      elseif k == 'd' then
+        return bn_lib.new(pkey.pkey.rsa.d), nil
+      end
+    end
+  }), nil
+end
+
 function _M:getParameters()
   local key_type = C.EVP_PKEY_base_id(self.ctx)
   if key_type == evp_lib.EVP_PKEY_RSA then
-    return get_rsa_params(self.ctx)
+    if OPENSSL_11 then
+      return get_rsa_params_11(self.ctx)
+    else
+      return get_rsa_params_10(self.ctx)
+    end
   elseif key_type == evp_lib.EVP_PKEY_EC then
     return nil, "parameters of EC not supported"
   end

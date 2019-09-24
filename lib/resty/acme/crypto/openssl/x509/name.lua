@@ -27,7 +27,7 @@ local mt = { __index = _M, __tostring = tostring }
 
 function _M.new(cert)
   local ctx = C.X509_NAME_new()
-  if not ctx then
+  if ctx == nil then
     return nil, "X509_NAME_new() failed"
   end
   ffi_gc(ctx, C.X509_NAME_free)
@@ -42,14 +42,14 @@ end
 
 function _M:add(nid, txt)
   local asn1 = C.OBJ_txt2obj(nid, 0)
-  if not asn1 then
+  if asn1 == nil then
     return "OBJ_txt2obj() failed, invalid NID " .. (nid or "nil")
   end
 
-  local ok = C.X509_NAME_add_entry_by_OBJ(self.ctx, asn1, MBSTRING_ASC, txt, #txt, -1, 0)
+  local code = C.X509_NAME_add_entry_by_OBJ(self.ctx, asn1, MBSTRING_ASC, txt, #txt, -1, 0)
   C.ASN1_OBJECT_free(asn1)
 
-  if not ok then
+  if code ~= 1 then
     return "X509_NAME_add_entry_by_OBJ() failed"
   end
 

@@ -7,9 +7,12 @@ local openssl = require("resty.acme.crypto.openssl")
 -- [RFC7515].  This encoding uses a URL safe character set.  Trailing
 -- '=' characters MUST be stripped.  Encoded values that include
 -- trailing '=' characters MUST be rejected as improperly encoded.
-local function base64_urlencode(s)
-  return ngx.encode_base64(s):gsub("/", "_"):gsub("+", "-"):gsub("[= ]", "")
-end
+local base64 = require("ngx.base64")
+local encode_base64url = base64.encode_base64url
+--   -- Fallback if resty.core is not available
+--   encode_base64url = function (s)
+--     return ngx.encode_base64(s):gsub("/", "_"):gsub("+", "-"):gsub("[= ]", "")
+--   end
 
 -- https://tools.ietf.org/html/rfc7638
 local function thumbprint(pkey)
@@ -21,39 +24,63 @@ local function thumbprint(pkey)
   local jwk_ordered =
     string.format(
     '{"e":"%s","kty":"%s","n":"%s"}',
-    base64_urlencode(params.e:toBinary()),
+    encode_base64url(params.e:toBinary()),
     "RSA",
-    base64_urlencode(params.n:toBinary())
+    encode_base64url(params.n:toBinary())
   )
   local digest = openssl.digest.new("SHA256"):final(jwk_ordered)
-  return base64_urlencode(digest), nil
+  return encode_base64url(digest), nil
 end
 
 local function create_csr(domain_pkey, ...)
   local domains = {...}
 
-  local subject = openssl.name.new()
-  subject:add("CN", domains[1])
+  local err
 
-  local alt
+  local subject = openssl.name.new()
+  err = subject:add("CN", domains[1])
+  if err then
+    return nil, err
+  end
+
+  local alt, err
   if #{...} > 1 then
-    alt = openssl.altname.new()
+    alt, err = openssl.altname.new()
+    if err then
+      return nil, err
+    end
 
     for _, domain in pairs(domains) do
-      alt:add("DNS", domain)
+      err = alt:add("DNS", domain)
+      if err then
+        return nil, err
+      end
     end
   end
 
   local csr = openssl.csr.new()
-  csr:setSubject(subject)
+  err = csr:setSubject(subject)
+  if err then
+    return nil, err
+  end
   if alt then
-    csr:setSubjectAlt(alt)
+    err = csr:setSubjectAlt(alt)
+    if err then
+      return nil, err
+    end
   end
 
-  csr:setPublicKey(domain_pkey)
-  csr:sign(domain_pkey)
+  err = csr:setPublicKey(domain_pkey)
+  if err then
+    return nil, err
+  end
 
-  return csr:tostring("DER")
+  err = csr:sign(domain_pkey)
+  if err then
+    return nil, err
+  end
+
+  return csr:tostring("DER"), nil
 end
 
 local function create_pkey(bits, typ, curve)
@@ -69,7 +96,7 @@ local function create_pkey(bits, typ, curve)
 end
 
 return {
-    base64_urlencode = base64_urlencode,
+    encode_base64url = encode_base64url,
     thumbprint = thumbprint,
     create_csr = create_csr,
     create_pkey = create_pkey,

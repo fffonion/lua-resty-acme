@@ -21,7 +21,7 @@ local GENERAL_NAME_stack_gc = stack_lib.gc_of("GENERAL_NAME")
 
 function _M.new()
   local raw = C.OPENSSL_sk_new_null()
-  if not raw then
+  if raw == nil then
     return nil, "OPENSSL_sk_new_null() failed"
   end
   ffi_gc(raw, GENERAL_NAME_stack_gc)
@@ -82,8 +82,8 @@ function _M:add(typ, value)
   -- pushed to stack. instead, rely on the gc handler
   -- of the stack to release all memories
   local gen = C.GENERAL_NAME_new()
-  if not gen then
-    return nil, "GENERAL_NAME_new() failed"
+  if gen == nil then
+    return "GENERAL_NAME_new() failed"
   end
 
   if gen_id == GEN_DIRNAME then
@@ -94,7 +94,7 @@ function _M:add(typ, value)
 
   -- #define V_ASN1_IA5STRING                22
   local asn1_string = C.ASN1_STRING_type_new(22)
-  if not asn1_string then
+  if asn1_string == nil then
     C.GENERAL_NAME_free(gen)
     return "ASN1_STRING_type_new() failed"
   end
@@ -104,7 +104,7 @@ function _M:add(typ, value)
   local code = C.ASN1_STRING_set(gen.d.ia5, txt, #txt)
   if code ~= 1 then
     C.GENERAL_NAME_free(gen)
-    return "ASN1_STRING_set() failed " .. code
+    return "ASN1_STRING_set() failed: " .. code
   end
 
   C.OPENSSL_sk_push(self.ctx, gen)

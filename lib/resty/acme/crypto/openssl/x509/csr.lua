@@ -39,7 +39,7 @@ ffi.cdef [[
 
 ]]
 
-local function tostring(self, fmt)
+local function __tostring(self, fmt)
   local method
   if not fmt or fmt == 'PEM' then
     method = 'PEM_write_bio_X509_REQ'
@@ -52,11 +52,11 @@ local function tostring(self, fmt)
 end
 
 local _M = {}
-local mt = { __index = _M, __tostring = tostring }
+local mt = { __index = _M, __tostring = __tostring }
 
 function _M.new()
   local ctx = C.X509_REQ_new()
-  if not ctx then
+  if ctx == il then
     return nil, "X509_REQ_new() failed"
   end
   ffi_gc(ctx, C.X509_REQ_free)
@@ -72,7 +72,7 @@ end
 function _M:setSubject(name)
   local code = C.X509_REQ_set_subject_name(self.ctx, name.ctx)
   if code ~= 1 then
-    return "X509_REQ_set_subject_name() failed"
+    return "X509_REQ_set_subject_name() failed: " .. code
   end
 end
 
@@ -89,16 +89,16 @@ local function xr_modifyRequestedExtension(csr, target_nid, value, crit, flags)
 
   local sk = stack_ptr_type()
   sk[0] = C.X509_REQ_get_extensions(csr)
-  if not sk[0] then
-    return "X509_REQ_get_extensions() failed"
-  end
   ffi_gc(sk[0], X509_EXTENSION_stack_gc)
 
-	if C.X509V3_add1_i2d(sk, target_nid, value, crit, flags) ~= 1 then
-    return "X509V3_add1_i2d() failed"
+  local code
+  code = C.X509V3_add1_i2d(sk, target_nid, value, crit, flags)
+  if code ~= 1 then
+    return "X509V3_add1_i2d() failed: " .. code
   end
-	if C.X509_REQ_add_extensions(csr, sk[0]) == 0 then
-    return "X509_REQ_add_extensions() failed"
+  code = C.X509_REQ_add_extensions(csr, sk[0])
+  if code ~= 1 then
+    return "X509_REQ_add_extensions() failed: " .. code
   end
 
 end
@@ -106,16 +106,13 @@ end
 function _M:setSubjectAlt(alt)
   -- #define NID_subject_alt_name            85
   -- #define X509V3_ADD_REPLACE              2L
-  local code = xr_modifyRequestedExtension(self.ctx, 85, alt.ctx, 0, 2)
-  if code ~= 1 then
-    return "X509_add1_ext_i2d() failed"
-  end
+  return xr_modifyRequestedExtension(self.ctx, 85, alt.ctx, 0, 2)
 end
 
 function _M:setPublicKey(pkey)
   local code = C.X509_REQ_set_pubkey(self.ctx, pkey.ctx)
   if code ~= 1 then
-    return "X509_REQ_set_pubkey() failed"
+    return "X509_REQ_set_pubkey() failed: " .. code
   end
 end
 
@@ -123,27 +120,30 @@ local int_ptr = ffi.typeof("int[1]")
 function _M:sign(pkey)
   local nid = int_ptr()
   local code = C.EVP_PKEY_get_default_digest_nid(pkey.ctx, nid)
-  if code ~= 1 then
-    return "EVP_PKEY_get_default_digest_nid() failed"
+  if code <= 0 then -- 1: advisory 2: mandatory
+    return "EVP_PKEY_get_default_digest_nid() failed: " .. code
   end
   local name = C.OBJ_nid2sn(nid[0])
-  if not name then
+  if name == nil then
     return "OBJ_nid2sn() failed"
   end
   local md = C.EVP_get_digestbyname(name)
-  if not md then
+  if md == nil then
     return "EVP_get_digestbynid() failed"
   end
-  local code = C.X509_REQ_sign(self.ctx, pkey.ctx, md)
-  if code == 0 then
+  local sz = C.X509_REQ_sign(self.ctx, pkey.ctx, md)
+  if sz == 0 then
     return "X509_REQ_sign() failed"
   end
 end
 
 function _M:tostring(fmt)
-  return tostring(self, fmt)
+  return __tostring(self, fmt)
 end
 
+function _M:toPEM()
+  return __tostring(self, "PEM")
+end
 
 
 return _M

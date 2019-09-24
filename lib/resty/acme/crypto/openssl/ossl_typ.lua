@@ -18,6 +18,7 @@ ffi.cdef(
   typedef struct evp_md_ctx_st EVP_MD_CTX;
   typedef struct engine_st ENGINE;
   typedef struct evp_md_st EVP_MD;
+  typedef struct evp_pkey_asn1_method_st EVP_PKEY_ASN1_METHOD;
   typedef struct x509_st X509;
   typedef struct X509_name_st X509_NAME;
   typedef struct X509_req_st X509_REQ;
@@ -41,5 +42,12 @@ ffi.cdef(
   typedef int ASN1_BOOLEAN;
   typedef int ASN1_NULL;
   typedef struct ec_key_st EC_KEY;
+  typedef struct rsa_meth_st RSA_METHOD;
+  // typedef struct evp_keymgmt_st EVP_KEYMGMT;
+  // typedef struct crypto_ex_data_st CRYPTO_EX_DATA;
+  // typedef struct bn_mont_ctx_st BN_MONT_CTX;
+  // typedef struct bn_blinding_st BN_BLINDING;
+  // crypto.h
+  // typedef void CRYPTO_RWLOCK;
 ]])
 

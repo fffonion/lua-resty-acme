@@ -14,7 +14,7 @@ local function read_using_bio(f, ...)
   end
 
   local bio_method = C.BIO_s_mem()
-  if not bio_method then
+  if bio_method == nil then
       return nil, "BIO_s_mem() failed"
   end
   local bio = C.BIO_new(bio_method)
@@ -23,12 +23,12 @@ local function read_using_bio(f, ...)
   -- BIO_reset; #define BIO_CTRL_RESET 1
   local code = C.BIO_ctrl(bio, 1, 0, nil)
   if code ~= 1 then
-      return nil, "BIO_ctrl() failed"
+      return nil, "BIO_ctrl() failed: " .. code
   end
 
   local code = C[f](bio, ...)
   if code ~= 1 then
-      return nil, f .. "() failed"
+      return nil, f .. "() failed: " .. code
   end
   
   local buf = ffi_new("char *[1]")
@@ -41,4 +41,5 @@ end
 
 return {
   read_using_bio = read_using_bio,
+  version_num = version_num,
 }

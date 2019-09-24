@@ -41,15 +41,15 @@ ffi.cdef(
 
 function _M.new(bn)
   local _bn
-  if not bn or type(bn) == 'number'then
+  if bn == nil or type(bn) == 'number'then
     _bn = C.BN_new()
+    ffi_gc(_bn, C.BN_free)
     if type(bn) == 'number' then
       if C.BN_set_word(_bn, bn) ~= 1 then
         C.BN_free(bn)
         return nil, "BN_set_word() failed"
       end
     end
-    ffi_gc(bn, C.BN_free)
   elseif type(bn) == 'cdata' then
     _bn = bn
   else
@@ -63,9 +63,12 @@ function _M:toBinary()
   local length = (C.BN_num_bits(self.bn)+7)/8
   length = floor(length)
   local buf = ffi_new('unsigned char[?]', length)
-  local code = C.BN_bn2bin(self.bn, buf)
+  local sz = C.BN_bn2bin(self.bn, buf)
+  if sz == 0 then
+    return nil, "BN_bn2bin() failed"
+  end
   buf = ffi_str(buf, length)
-  return buf
+  return buf, nil
 end
 
 return _M
