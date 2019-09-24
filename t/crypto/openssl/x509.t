@@ -19,10 +19,10 @@ __DATA__
 --- config
     location =/t {
         content_by_lua_block {
+            os.execute("openssl req -newkey rsa:2048 -nodes -keyout key.pem -x509 -days 365 -out cert.pem -subj '/'")
             ngx.update_time()
             local nb_expected = math.floor(ngx.now())
             local na_expected = math.floor(nb_expected + 365 * 86400)
-            os.execute("openssl req -newkey rsa:2048 -nodes -keyout key.pem -x509 -days 365 -out cert.pem -subj '/'")
             local pem = io.open("cert.pem"):read("*a")
             local openssl = require("resty.acme.crypto.openssl")
             local p, err = openssl.x509.new(pem)

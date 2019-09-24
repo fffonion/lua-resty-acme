@@ -98,7 +98,7 @@ end
 local past = { 0, 31, 59, 90, 120, 151, 181, 212, 243, 273, 304, 334 }
 local function yday(year, mon, mday)
 	local d = past[mon] + mday - 1
-  if mon > 1 and isleap(year) then
+  if mon > 2 and isleap(year) then
     d = d + 1
   end
 	return d
@@ -108,11 +108,15 @@ local function leaps(year)
   return floor(year / 400) + floor(year / 4) - floor(year / 100)
 end
 
+-- make sure this code works after 100 years
+local yyyy = tonumber(ngx.today():sub(1, 4))
+local yy00 = yyyy - yyyy % 100
+
 local function asn1_to_unix(asn1)
   local s = asn1_lib.ASN1_STRING_get0_data(asn1)
   local s = ffi.string(s)
   -- 190303223958Z
-  local year = 2000 + tonumber(s:sub(1, 2))
+  local year = yy00 + tonumber(s:sub(1, 2))
   local month = tonumber(s:sub(3, 4))
   local day = tonumber(s:sub(5, 6))
   local hour = tonumber(s:sub(7, 8))
