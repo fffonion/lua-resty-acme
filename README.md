@@ -1,6 +1,8 @@
 # lua-resty-acme
 
-Automatic Let's Encrypt certificate serving (RSA + ECC) and Lua implementation of the ACME protocol.
+Automatic Let's Encrypt certificate serving (RSA + ECC) and pure Lua implementation of the ACMEv2 protocol.
+
+![Build Status](https://travis-ci.org/fffonion/lua-resty-acme.svg?branch=master)
 
 Table of Contents
 =================
@@ -21,7 +23,17 @@ This library consits of two parts:
 - `resty.acme.autossl`: automatic lifecycle management of Let's Encrypt certificates
 - `resty.acme.client`: Lua implementation of ACME v2 protocol
 
-Install using luarocks:
+Install using opm:
+
+```shell
+opm install fffonion/lua-resty-acme
+```
+
+When installing with opm, this library will run with an FFI-based openssl backend, which currently supports
+OpenSSL `1.1.x` series.
+
+
+Alternatively, to install using luarocks:
 
 ```shell
 luarocks install lua-resty-acme
@@ -30,14 +42,7 @@ luarocks install lua-resty-acme
 When installing using `Luarocks`, `luaossl` will be installed. Installing `luaossl` requires you to have
 a working compiler toolchain and the openssl headers installed (`libssl-dev` on Ubuntu/Debian, and `openssl-devel`
 on CentOS/Fedora).
-Alternatively, this library can also run with an FFI-based openssl backend.
-The FFI version *might* only work with openssl >= 1.1.
 
-Install using opm:
-
-```shell
-opm install fffonion/lua-resty-acme
-```
 
 [Back to TOC](#table-of-contents)
 
