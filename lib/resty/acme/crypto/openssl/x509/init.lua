@@ -11,16 +11,55 @@ local _M = {}
 local mt = {__index = _M}
 
 require "resty.acme.crypto.openssl.ossl_typ"
-require "resty.acme.crypto.openssl.asn1"
+local asn1_lib = require("resty.acme.crypto.openssl.asn1")
+local OPENSSL_10 = require("resty.acme.crypto.openssl.version").OPENSSL_10
 
 ffi.cdef [[
   void X509_free(X509 *a);
-  const ASN1_TIME *X509_get0_notBefore(const X509 *x);
-  const ASN1_TIME *X509_get0_notAfter(const X509 *x);
 
   EVP_PKEY *d2i_PrivateKey_bio(BIO *bp, EVP_PKEY **a);
   EVP_PKEY *d2i_PUBKEY_bio(BIO *bp, EVP_PKEY **a);
 ]]
+
+local X509_get0_notBefore, X509_get0_notAfter
+if OPENSSL_10 then
+  ffi.cdef [[
+    // crypto/x509/x509.h
+    typedef struct X509_val_st {
+      ASN1_TIME *notBefore;
+      ASN1_TIME *notAfter;
+    } X509_VAL;
+    // Note: this struct is trimmed
+    typedef struct x509_cinf_st {
+      ASN1_INTEGER *version;
+      ASN1_INTEGER *serialNumber;
+      /*X509_ALGOR*/ void *signature;
+      /*X509_NAME*/ void *issuer;
+      X509_VAL *validity;
+      // trimmed
+    } X509_CINF;
+    // Note: this struct is trimmed
+    struct x509_st {
+      X509_CINF *cert_info;
+      // trimmed
+    } X509;
+
+  ]]
+  X509_get0_notBefore = function(x509)
+    return x509.cert_info.validity.notBefore
+  end
+  X509_get0_notAfter = function(x509)
+    return x509.cert_info.validity.notAfter
+  end
+else
+  ffi.cdef [[
+    const ASN1_TIME *X509_get0_notBefore(const X509 *x);
+    const ASN1_TIME *X509_get0_notAfter(const X509 *x);
+  ]]
+  X509_get0_notBefore = C.X509_get0_notBefore
+  X509_get0_notAfter = C.X509_get0_notAfter
+end
+
 
 local _M = {}
 local mt = { __index = _M, __tostring = tostring }
@@ -70,7 +109,7 @@ local function leaps(year)
 end
 
 local function asn1_to_unix(asn1)
-  local s = C.ASN1_STRING_get0_data(asn1)
+  local s = asn1_lib.ASN1_STRING_get0_data(asn1)
   local s = ffi.string(s)
   -- 190303223958Z
   local year = 2000 + tonumber(s:sub(1, 2))
@@ -92,12 +131,12 @@ end
 
 function _M:getLifetime()
   local err
-  local not_before = C.X509_get0_notBefore(self.ctx)
+  local not_before = X509_get0_notBefore(self.ctx)
   if not_before == nil then
     return nil, nil, "X509_get_notBefore() failed"
   end
   not_before = asn1_to_unix(not_before)
-  local not_after = C.X509_get0_notAfter(self.ctx)
+  local not_after = X509_get0_notAfter(self.ctx)
   if not_after == nil then
     return nil, nil, "X509_get_notAfter() failed"
   end

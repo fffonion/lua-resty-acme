@@ -30,7 +30,7 @@ opm install fffonion/lua-resty-acme
 ```
 
 When installing with opm, this library will run with an FFI-based openssl backend, which currently supports
-OpenSSL `1.1.x` series.
+OpenSSL `1.1.1`, `1.1.0` and `1.0.2` series.
 
 
 Alternatively, to install using luarocks:

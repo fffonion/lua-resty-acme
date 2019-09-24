@@ -12,15 +12,9 @@ require "resty.acme.crypto.openssl.ossl_typ"
 require "resty.acme.crypto.openssl.stack"
 
 ffi.cdef [[
-  typedef struct EDIPartyName_st {
-    ASN1_STRING *nameAssigner;
-    ASN1_STRING *partyName;
-  } EDIPARTYNAME;
+  typedef struct EDIPartyName_st EDIPARTYNAME;
 
-  typedef struct otherName_st {
-    ASN1_OBJECT *type_id;
-    ASN1_TYPE *value;
-  } OTHERNAME;
+  typedef struct otherName_st OTHERNAME;
 
   typedef struct GENERAL_NAME_st {
       int type;

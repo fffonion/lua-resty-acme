@@ -20,7 +20,7 @@ local mt = { __index = _M, __tostring = tostring }
 local GENERAL_NAME_stack_gc = stack_lib.gc_of("GENERAL_NAME")
 
 function _M.new()
-  local raw = C.OPENSSL_sk_new_null()
+  local raw = stack_lib.OPENSSL_sk_new_null()
   if raw == nil then
     return nil, "OPENSSL_sk_new_null() failed"
   end
@@ -107,7 +107,7 @@ function _M:add(typ, value)
     return "ASN1_STRING_set() failed: " .. code
   end
 
-  C.OPENSSL_sk_push(self.ctx, gen)
+  stack_lib.OPENSSL_sk_push(self.ctx, gen)
   return
 end
 
