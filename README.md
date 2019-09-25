@@ -315,6 +315,7 @@ See Also
 * [Automatic Certificate Management Environment (ACME)](https://tools.ietf.org/html/rfc8555)
 * [haproxytech/haproxy-lua-acme](https://github.com/haproxytech/haproxy-lua-acme) The ACME Lua implementation used in HAProxy.
 * [GUI/lua-resty-auto-ssl](https://github.com/GUI/lua-resty-auto-ssl)
+* [lua-resty-openssl](https://github.com/fffonion/lua-resty-openssl)
 * [Let's Encrypt API rate limits](https://letsencrypt.org/docs/rate-limits/)
 
 [Back to TOC](#table-of-contents)

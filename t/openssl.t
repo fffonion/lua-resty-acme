@@ -7,7 +7,7 @@ use Cwd qw(cwd);
 my $pwd = cwd();
 
 our $HttpConfig = qq{
-    lua_package_path "$pwd/lib/?.lua;$pwd/lib/?/init.lua;;";
+    lua_package_path "$pwd/lib/?.lua;$pwd/lib/?/init.lua;$pwd/../lib/?.lua;$pwd/../lib/?/init.lua;;";
 };
 
 run_tests();
@@ -18,7 +18,7 @@ __DATA__
 --- config
     location =/t {
         content_by_lua_block {
-            assert(require("resty.acme.crypto.openssl"))
+            assert(require("resty.acme.openssl"))
         }
     }
 --- request

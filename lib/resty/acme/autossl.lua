@@ -1,7 +1,7 @@
 local lrucache = require "resty.lrucache"
 local acme = require "resty.acme.client"
 local util = require "resty.acme.util"
-local openssl = require("resty.acme.crypto.openssl")
+local openssl = require("resty.acme.openssl")
 local json = require "cjson"
 local ssl = require "ngx.ssl"
 

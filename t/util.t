@@ -7,7 +7,7 @@ use Cwd qw(cwd);
 my $pwd = cwd();
 
 our $HttpConfig = qq{
-    lua_package_path "$pwd/lib/?.lua;$pwd/lib/?/init.lua;;";
+    lua_package_path "$pwd/lib/?.lua;$pwd/lib/?/init.lua;$pwd/../lib/?.lua;$pwd/../lib/?/init.lua;;";
 };
 
 
@@ -20,7 +20,7 @@ __DATA__
     location =/t {
         content_by_lua_block {
             local util = require("resty.acme.util")
-            local openssl = require("resty.acme.crypto.openssl")
+            local openssl = require("resty.acme.openssl")
             local pkey = openssl.pkey.new()
             local der, err = util.create_csr(pkey, "dns1.com", "dns2.com", "dns3.com")
             if err then
@@ -49,7 +49,7 @@ __DATA__
     location =/t {
         content_by_lua_block {
             local util = require("resty.acme.util")
-            local openssl = require("resty.acme.crypto.openssl")
+            local openssl = require("resty.acme.openssl")
             local pkey = openssl.pkey.new({
                 bits = 4096,
             })
@@ -80,7 +80,7 @@ __DATA__
     location =/t {
         content_by_lua_block {
             local util = require("resty.acme.util")
-            local openssl = require("resty.acme.crypto.openssl")
+            local openssl = require("resty.acme.openssl")
             local pkey = openssl.pkey.new({
                 type = 'EC',
                 curve = 'prime256v1',

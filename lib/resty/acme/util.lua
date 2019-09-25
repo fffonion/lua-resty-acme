@@ -1,4 +1,4 @@
-local openssl = require("resty.acme.crypto.openssl")
+local openssl = require("resty.acme.openssl")
 
 -- https://tools.ietf.org/html/rfc8555 Page 10
 -- Binary fields in the JSON objects used by _M are encoded using

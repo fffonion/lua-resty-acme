@@ -9,7 +9,7 @@ my $pwd = cwd();
 sub ::make_http_config{
     my ($key_types, $key_path) = @_;
     return qq{
-        lua_package_path "$pwd/lib/?.lua;$pwd/../lib/?.lua;$pwd/lib/?/init.lua;;";
+        lua_package_path "$pwd/lib/?.lua;$pwd/lib/?/init.lua;$pwd/../lib/?.lua;$pwd/../lib/?/init.lua;;";
         lua_package_cpath "$pwd/luajit/lib/?.so;/usr/local/openresty-debug/lualib/?.so;/usr/local/openresty/lualib/?.so;;";
         resolver 8.8.8.8 ipv6=off;
 

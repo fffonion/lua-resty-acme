@@ -1,7 +1,7 @@
 local http = require("resty.http")
 local json = require("cjson")
 local util = require("resty.acme.util")
-local openssl = require("resty.acme.crypto.openssl")
+local openssl = require("resty.acme.openssl")
 
 local encode_base64url = util.encode_base64url
 
@@ -11,7 +11,7 @@ local ngx_INFO = ngx.INFO
 local ngx_DEBUG = ngx.DEBUG
 
 local _M = {
-  _VERSION = '0.1.1'
+  _VERSION = '0.1.2'
 }
 local mt = {__index = _M}
 
