@@ -19,6 +19,6 @@ $(DIRS):
 install: all $(DIRS)
 	
 test: all
-	PATH=$(OPENRESTY_PREFIX)/nginx/sbin:$$PATH prove -I../test-nginx/lib -r t
+	PATH=$(OPENRESTY_PREFIX)/nginx/sbin:$$PATH TEST_NGINX_TIMEOUT=60 SUBDOMAIN=localtest prove -I../test-nginx/lib -r t
 
 

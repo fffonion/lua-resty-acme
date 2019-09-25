@@ -4,6 +4,8 @@ Automatic Let's Encrypt certificate serving (RSA + ECC) and pure Lua implementat
 
 ![Build Status](https://travis-ci.org/fffonion/lua-resty-acme.svg?branch=master)
 
+[简体中文](https://yooooo.us/2019/lua-resty-acme)
+
 Table of Contents
 =================
 
@@ -49,7 +51,7 @@ on CentOS/Fedora).
 Status
 ========
 
-Experimental.
+Production.
 
 Synopsis
 ========
@@ -69,7 +71,7 @@ Use the following example config:
 events {}
 
 http {
-    resolver 8.8.8.8;
+    resolver 8.8.8.8 ipv6=off;
 
     lua_shared_dict acme 16m;
     lua_shared_dict autossl_events 128k;
@@ -280,8 +282,9 @@ Hashicorp [Vault](https://www.vaultproject.io/) based storage.
 TODO
 ====
 - autossl: ocsp staping
+- storage: vault backend
 - storage: implement ttl?
-- Add tests
+- ci: test storage
 - openssl: add check for pkey has privkey
 - openssl: add check for self.ctx classmethod call
 
