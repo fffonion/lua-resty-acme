@@ -42,7 +42,7 @@ function _M:serve_challenge()
   end
 
   if not value then
-    ngx.log(ngx.ERR, "no corresponding response found for ", token)
+    ngx.log(ngx.WARN, "no corresponding response found for ", token)
     ngx.exit(404)
   end
 

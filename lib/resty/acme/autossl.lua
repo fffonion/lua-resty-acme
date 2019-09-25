@@ -394,7 +394,7 @@ function AUTOSSL.ssl_certificate()
       end
       chains_set[i] = true
 
-      log(ngx_DEBUG, "set ", typ, " key for domain ", name)
+      log(ngx_DEBUG, "set ", typ, " key for domain ", domain)
       ssl.set_cert(certkey.cert)
       ssl.set_priv_key(certkey.pkey)
     end

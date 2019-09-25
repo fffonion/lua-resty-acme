@@ -60,7 +60,7 @@ Create account private key and fallback certs:
 # create account key
 openssl genpkey -algorithm RSA -pkeyopt rsa_keygen_bits:4096 -out /etc/openresty/account.key
 # create fallback cert and key
-openssl req -newkey rsa:2048 -nodes -keyout /etc/openresty/default.pem -x509 -days 365 -out /etc/openresty/default.key
+openssl req -newkey rsa:2048 -nodes -keyout /etc/openresty/default.key -x509 -days 365 -out /etc/openresty/default.pem
 ```
 
 Use the following example config:
