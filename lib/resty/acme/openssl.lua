@@ -13,7 +13,7 @@ if ok then
       digest = require("resty.openssl.digest")
     }
 end
-error(ret)
+
 ngx.log(ngx.ERR, "resty.openssl doesn't load: ", ret)
 
 local ok, _ = pcall(require, "openssl.pkey")
