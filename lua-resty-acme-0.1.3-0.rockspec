@@ -1,5 +1,5 @@
 package = "lua-resty-acme"
-version = "0.1.2-0"
+version = "0.1.3-0"
 source = {
    url = "git+https://github.com/fffonion/lua-resty-acme.git"
 }
