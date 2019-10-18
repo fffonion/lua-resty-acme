@@ -31,8 +31,8 @@ Install using opm:
 opm install fffonion/lua-resty-acme
 ```
 
-When installing with opm, this library will run with an FFI-based openssl backend, which currently supports
-OpenSSL `1.1.1`, `1.1.0` and `1.0.2` series.
+This library uses [an FFI-based openssl backend](https://github.com/fffonion/lua-resty-openssl),
+which currently supports OpenSSL `1.1.1`, `1.1.0` and `1.0.2` series.
 
 
 Alternatively, to install using luarocks:
@@ -40,10 +40,6 @@ Alternatively, to install using luarocks:
 ```shell
 luarocks install lua-resty-acme
 ```
-
-When installing using `Luarocks`, `luaossl` will be installed. Installing `luaossl` requires you to have
-a working compiler toolchain and the openssl headers installed (`libssl-dev` on Ubuntu/Debian, and `openssl-devel`
-on CentOS/Fedora).
 
 
 [Back to TOC](#table-of-contents)

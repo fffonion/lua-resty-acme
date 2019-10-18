@@ -16,7 +16,7 @@ local encode_base64url = base64.encode_base64url
 
 -- https://tools.ietf.org/html/rfc7638
 local function thumbprint(pkey)
-  local params = pkey:getParameters()
+  local params = pkey:get_parameters()
   if not params then
     return nil, "could not extract account key parameters."
   end
@@ -24,9 +24,9 @@ local function thumbprint(pkey)
   local jwk_ordered =
     string.format(
     '{"e":"%s","kty":"%s","n":"%s"}',
-    encode_base64url(params.e:toBinary()),
+    encode_base64url(params.e:to_binary()),
     "RSA",
-    encode_base64url(params.n:toBinary())
+    encode_base64url(params.n:to_binary())
   )
   local digest = openssl.digest.new("SHA256"):final(jwk_ordered)
   return encode_base64url(digest), nil
@@ -35,10 +35,9 @@ end
 local function create_csr(domain_pkey, ...)
   local domains = {...}
 
-  local err
 
   local subject = openssl.name.new()
-  err = subject:add("CN", domains[1])
+  local _, err = subject:add("CN", domains[1])
   if err then
     return nil, err
   end
@@ -51,7 +50,7 @@ local function create_csr(domain_pkey, ...)
     end
 
     for _, domain in pairs(domains) do
-      err = alt:add("DNS", domain)
+      _, err = alt:add("DNS", domain)
       if err then
         return nil, err
       end
@@ -59,18 +58,18 @@ local function create_csr(domain_pkey, ...)
   end
 
   local csr = openssl.csr.new()
-  err = csr:setSubject(subject)
+  err = csr:set_subject_name(subject)
   if err then
     return nil, err
   end
   if alt then
-    err = csr:setSubjectAlt(alt)
+    err = csr:set_subject_alt(alt)
     if err then
       return nil, err
     end
   end
 
-  err = csr:setPublicKey(domain_pkey)
+  err = csr:set_pubkey(domain_pkey)
   if err then
     return nil, err
   end
@@ -92,7 +91,7 @@ local function create_pkey(bits, typ, curve)
     curve = curve,
   })
 
-  return pkey:toPEM('private')
+  return pkey:to_PEM('private')
 end
 
 return {

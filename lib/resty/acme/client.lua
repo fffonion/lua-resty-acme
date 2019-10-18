@@ -149,15 +149,15 @@ function _M:jws(url, payload)
 
   -- TODO: much better handling
   if payload.contact then
-    local params, err = self.account_pkey:getParameters()
+    local params, err = self.account_pkey:get_parameters()
     if not params then
       return nil, "can't get parameters from account key: " .. (err or "nil")
     end
 
     jws.protected.jwk = {
-      e = encode_base64url(params.e:toBinary()),
+      e = encode_base64url(params.e:to_binary()),
       kty = "RSA",
-      n = encode_base64url(params.n:toBinary())
+      n = encode_base64url(params.n:to_binary())
     }
   elseif not self.account_kid then
     return nil, "account_kid is not defined, provide via config or create account first"
