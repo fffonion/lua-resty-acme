@@ -47,6 +47,8 @@ function _M:serve_challenge()
   end
 
   ngx.say(value)
+  -- this following must be set to allow the library to be used in other openresty framework
+  ngx.exit(0)
 end
 
 return _M

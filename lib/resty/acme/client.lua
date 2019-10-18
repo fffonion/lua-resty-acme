@@ -63,7 +63,7 @@ function _M.new(conf)
 
   local storage_adapter = conf.storage_adapter
   -- TODO: catch error and return gracefully
-  if not storage_adapter:find("resty.acme.storage.") then
+  if not storage_adapter:find([[\.]]) then
     storage_adapter = "resty.acme.storage." .. storage_adapter
   end
   local storagemod = require(storage_adapter)
