@@ -11,7 +11,7 @@ local ngx_INFO = ngx.INFO
 local ngx_DEBUG = ngx.DEBUG
 
 local _M = {
-  _VERSION = '0.1.3'
+  _VERSION = '0.1.4'
 }
 local mt = {__index = _M}
 
