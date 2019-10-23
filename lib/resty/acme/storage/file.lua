@@ -33,9 +33,21 @@ function _M:set(k, v)
   file:close()
 end
 
+function exists(f)
+  -- TODO: check for existence, not just able to open or not
+  local f, err = io.open(f, "rb")
+  if f then
+    f:close()
+  end
+  return err == nil
+end
+
 function _M:delete(k)
   local f = regulate_filename(self.dir, k)
-  local err = os.remove(f)
+  if not exists(f) then
+    return nil, nil
+  end
+  local ok, err = os.remove(f)
   if err then
     return err
   end
@@ -45,8 +57,9 @@ function _M:get(k)
   local f = regulate_filename(self.dir, k)
   local file, err = io.open(f, "rb")
   if err then
+    ngx.log(ngx.ERR, "can't read file: ", err)
     -- TODO: return nil, nil if not found
-    return nil, err
+    return nil, nil
   end
   local output, err = file:read("*a")
   if err then
@@ -57,7 +70,7 @@ function _M:get(k)
 end
 
 function _M:list(prefix)
-  error("nyi")
+  return {}, "nyi"
 end
 
 return _M

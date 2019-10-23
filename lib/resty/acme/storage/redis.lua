@@ -4,12 +4,14 @@ local _M = {}
 local mt = {__index = _M}
 
 function _M.new(conf)
+  conf = conf or {}
   local self =
     setmetatable(
     {
       host = conf.host or '127.0.0.1',
       port = conf.port or 6379,
       database = conf.database,
+      auth = conf.auth,
     },
     mt
   )
@@ -17,28 +19,34 @@ function _M.new(conf)
 end
 
 local function op(self, op, ...)
-  local client = ngx.ctx.acme_redis_storage
-  if not client then
-    client = redis:new()
-    local ok, err = client:connect(
-      self.host,
-      self.port
-    )
-    if not ok then
-      return nil, err
+  local ok, err
+  local client = redis:new()
+  client:set_timeouts(1000, 1000, 1000) -- 1 sec
+
+  ok, err = client:connect(
+    self.host,
+    self.port
+  )
+  if not ok then
+    return nil, err
+  end
+  
+  if self.auth then
+    ok, err = client:auth(self.auth)
+    if err then
+      return nil, "authentication failed " .. err
     end
-    ngx.ctx.acme_redis_storage = client
   end
 
-  if conf.database then
-    local ok, err = client:select(database)
+  if self.database then
+    ok, err = client:select(self.database)
     if not ok then
       return nil, "can't select database " .. err
     end
   end
 
   ok, err = client[op](client, ...)
-  client:set_keepalive(10000, 100)
+  client:close()
   return ok, err
 end
 
@@ -50,7 +58,7 @@ function _M:set(k, v)
 end
 
 function _M:delete(k)
-  local ok, err = op(self, 'delete', k)
+  local ok, err = op(self, 'del', k)
   if err then
     return err
   end
@@ -65,9 +73,10 @@ function _M:get(k)
 end
 
 local empty_table = {}
-function _M:keys(prefix)
-  local res, err = op(self, 'keys', prefix)
-  if res == ngx.null then
+function _M:list(prefix)
+  prefix = prefix or ""
+  local res, err = op(self, 'keys', prefix .. "*")
+  if not res or res == ngx.null then
     return empty_table, err
   end
   return res, err
