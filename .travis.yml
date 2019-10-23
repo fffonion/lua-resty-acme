@@ -8,6 +8,7 @@ compiler: gcc
 
 services:
  - redis-server
+ - docker
 
 cache:
   directories:
@@ -34,6 +35,10 @@ env:
     - NGINX_VERSION=1.15.8 OPENSSL_VER=1.1.0l
     - NGINX_VERSION=1.15.8 OPENSSL_VER=1.1.1d
 
+before_install:
+  - docker run -d -e CONSUL_CLIENT_INTERFACE='eth0' -e CONSUL_BIND_INTERFACE='eth0' -p 127.0.0.1:8500:8500 consul agent -server -bootstrap-expect=1
+  - docker run -d --user root --cap-add=IPC_LOCK -e VAULT_DEV_ROOT_TOKEN_ID=root --name=ctmpl-vault -p 127.0.0.1:8200:8200 vault server -dev
+
 install:
   - export NGX_BUILD_CC=$CC
   - export PATH=$PWD/work/nginx/sbin:$PWD/nginx-devel-utils:$PATH
@@ -48,10 +53,11 @@ install:
   # lua libraries
   - mkdir ../lib
   - git clone https://github.com/openresty/lua-resty-lrucache.git ../lua-resty-lrucache
+  - git clone https://github.com/openresty/lua-resty-redis.git ../lua-resty-redis
   - git clone -b v0.15 https://github.com/ledgetech/lua-resty-http ../lua-resty-http
   - git clone -b 1.0.0 https://github.com/fffonion/lua-resty-worker-events ../lua-resty-worker-events
-  - git clone https://github.com/fffonion/lua-resty-openssl ../lua-resty-openssl
-  - cp -r ../lua-resty-lrucache/lib/* ../lua-resty-http/lib/* ../lua-resty-worker-events/lib/* ../lua-resty-openssl/lib/* ../lib/
+  - git clone -b 0.2.1 https://github.com/fffonion/lua-resty-openssl ../lua-resty-openssl
+  - cp -r ../lua-resty-lrucache/lib/* ../lua-resty-redis/lib/* ../lua-resty-http/lib/* ../lua-resty-worker-events/lib/* ../lua-resty-openssl/lib/* ../lib/
   - find ../lib
   # luajit
   - git clone -b v2.1-agentzh https://github.com/openresty/luajit2.git
