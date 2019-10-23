@@ -122,15 +122,14 @@ many requests that hits [rate limiting](https://letsencrypt.org/docs/rate-limits
 
 By default `autossl` only creates RSA certificates. To use ECC certificates or both, uncomment
 `domain_key_types = { 'rsa', 'ecc' }`. Note that multiple certificate
-chain is only supported by OpenSSL 1.1 and later, check the OpenSSL version your OpenResty
-installation is using by runing `openresty -V` first.
+chain is only supported by NGINX 1.11.0 or later.
 
 A certificate will be *queued* to create after Nginx seen request with such SNI, which might
 take tens of seconds to finish. During the meantime, requests with such SNI are responsed
 with the fallback certificate.
 
 Note that `domain_whitelist` must be set to include your domain that you wish to server autossl, to
-prevent potential abusing using fake SNI in SSL handshake.
+prevent potential abuse using fake SNI in SSL handshake.
 ```lua
 domain_whitelist = { "domain1.com", "domain2.com", "domain3.com" },
 ```
@@ -234,7 +233,9 @@ See also [Storage Adapters](#storage-adapters) below.
 
 Storage adapters are used in `autossl` or acme `client` to storage temporary or
 persistent data. Depending on the deployment environment, there're currently
-three storage adapters available to select from.
+five storage adapters available to select from. To implement a custom storage
+adapter, please refer to
+[this doc](https://github.com/fffonion/lua-resty-acme/blob/master/lib/resty/acme/storage/README.md).
 
 ### file
 
@@ -267,22 +268,53 @@ storage_config = {
     host = '127.0.0.1',
     port = 6379,
     database = 0,
+    -- Redis authentication key
+    auth = nil,
 }
 ```
 
 ### vault
 
-Hashicorp [Vault](https://www.vaultproject.io/) based storage.
+Hashicorp [Vault](https://www.vaultproject.io/) based storage. The default config is:
+
+
+```lua
+storage_config = {
+    host = '127.0.0.1',
+    port = 8200,
+    -- secrets kv prefix path
+    kv_path = "acme",
+    -- Vault token
+    token = nil,
+    -- timeout in ms
+    timeout = 2000,
+}
+```
+
+### consul
+
+Hashicorp [Consul](https://www.consul.io/) based storage. The default config is:
+
+
+```lua
+storage_config = {
+    host = '127.0.0.1',
+    port = 8500,
+    -- kv prefix path
+    kv_path = "acme",
+    -- Consul ACL token
+    token = nil,
+    -- timeout in ms
+    timeout = 2000,
+}
+```
 
 
 TODO
 ====
 - autossl: ocsp staping
-- storage: vault backend
 - storage: implement ttl?
-- ci: test storage
 - openssl: add check for pkey has privkey
-- openssl: add check for self.ctx classmethod call
 
 [Back to TOC](#table-of-contents)
 
