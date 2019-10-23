@@ -8,7 +8,7 @@ function _M.new(conf)
   conf = conf or {}
   local base_url = conf.https and "https://" or "http://"
   base_url = base_url .. (conf.host or "127.0.0.1")
-  base_url = base_url .. ":" .. (conf.port or "8200")
+  base_url = base_url .. ":" .. (conf.port or "8500")
 
   local prefix = conf.kv_path
   if not prefix then
@@ -16,33 +16,29 @@ function _M.new(conf)
   elseif path:sub(1, 1) ~= "/" then
     prefix = "/" .. prefix
   end
-  local metadata_url = base_url .. "/v1/secret/metadata" .. prefix .. "/"
-  local data_url = base_url .. "/v1/secret/data" .. prefix .. "/"
+  base_url = base_url .. "/v1/kv" .. prefix .. "/"
 
   local self =
     setmetatable(
     {
       timeout = conf.timeout or 2000,
-      data_url = data_url,
-      metadata_url = metadata_url,
+      base_url = base_url,
     },
     mt
   )
   self.headers = {
-    ["X-Vault-Token"] = conf.token,
+    ["X-Consul-Token"] = conf.token,
   }
   return self, nil
 end
 
 local function api(self, method, uri, payload)
   local ok, err
-  -- vault don't keepalive, we create a new instance for every request
+  -- consul don't keepalive, we create a new instance for every request
   local client = http:new()
   client:set_timeout(self.timeout)
 
-  local payload = payload and cjson.encode(payload)
-
-  local res, err = client:request_uri(uri, {
+  local res, err = client:request_uri(self.base_url .. uri, {
     method = method,
     headers = self.headers,
     body = payload,
@@ -52,8 +48,8 @@ local function api(self, method, uri, payload)
   end
   client:close()
 
-  -- return "soft error" for not found and successful delete
-  if res.status == 404 or res.status == 204 then
+  -- return "soft error" for not found
+  if res.status == 404 then
     return nil, nil
   end
 
@@ -66,12 +62,7 @@ local function api(self, method, uri, payload)
 end
 
 function _M:set(k, v)
-  local res, err = api(self, "POST", self.data_url .. k, {
-    data = {
-      value = v,
-      note = "managed by lua-resty-acme",
-    }
-  })
+  local res, err = api(self, "PUT", k, v)
   if not res or err then
     return err or "set key failed"
   end
@@ -79,34 +70,33 @@ function _M:set(k, v)
 end
 
 function _M:delete(k)
-  local res, err = api(self, "DELETE", self.metadata_url .. k)
-  if err then
-    return "delete key failed"
+  local res, err = api(self, "DELETE", k)
+  if not res or err then
+    return err or "delete key failed"
   end
 end
 
 function _M:get(k)
-  local res, err = api(self, 'GET', self.data_url .. k)
+  local res, err = api(self, 'GET', k)
   if err then
     return nil, err
-  elseif not res or not res["data"] or not res["data"]["data"] 
-        or not res["data"]["data"]["value"] then
+  elseif not res or not res[1] or not res[1]["Value"] then
     return nil, nil
   end
-  return res["data"]["data"]["value"], err
+  return ngx.decode_base64(res[1]["Value"]), err
 end
 
 local empty_table = {}
 function _M:list(prefix)
-  local res, err = api(self, 'LIST', self.metadata_url)
+  local res, err = api(self, 'GET', '?keys')
   if err then
     return nil, err
-  elseif not res or not res['data'] or not res['data']['keys'] then
+  elseif not res then
     return empty_table, nil
   end
   local ret = {}
   local prefix_length = #prefix
-  for _, key in ipairs(res['data']['keys']) do
+  for _, key in ipairs(res) do
     local key, err = ngx.re.match(key, [[([^/]+)$]], "jo")
     if key then
       key = key[1]
