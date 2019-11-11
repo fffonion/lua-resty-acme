@@ -222,7 +222,7 @@ function AUTOSSL.check_renew()
     end
 
     local cert = openssl.x509.new(deserialized.cert)
-    local _, not_after = cert:getLifetime()
+    local _, not_after = cert:get_lifetime()
     if not_after - now < AUTOSSL.config.renew_threshold then
       local domain = deserialized.domain
       local sucess, err = ev.post(events._source, events.update_cert, {

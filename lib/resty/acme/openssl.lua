@@ -37,6 +37,8 @@ if ok then
   tb.csr.set_pubkey = tb.csr.setPublicKey
   tb.csr.set_subject_name = tb.csr.setSubject
   tb.csr.set_subject_alt = tb.csr.setSubjectAlt
+
+  tb.x509.set_lifetime = tb.x509.setLifetime
 end
 
 error("no openssl binding is usable or installed, requires either lua-resty-openssl or luaossl")
