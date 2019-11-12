@@ -298,7 +298,7 @@ function AUTOSSL.init(autossl_config, acme_config)
     error(err)
   end
 
-  if not autossl_config.storage_adapter:find("resty.acme.storage.") then
+  if not autossl_config.storage_adapter:find("%.") then
     autossl_config.storage_adapter = "resty.acme.storage." .. autossl_config.storage_adapter
   end
   
