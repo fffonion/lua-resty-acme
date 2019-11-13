@@ -225,7 +225,7 @@ function AUTOSSL.check_renew()
     local _, not_after = cert:get_lifetime()
     if not_after - now < AUTOSSL.config.renew_threshold then
       local domain = deserialized.domain
-      local sucess, err = ev.post(events._source, events.update_cert, {
+      local success, err = ev.post(events._source, events.update_cert, {
         domain = domain,
         renew = true,
         tries = 0,
@@ -301,7 +301,7 @@ function AUTOSSL.init(autossl_config, acme_config)
   if not autossl_config.storage_adapter:find("%.") then
     autossl_config.storage_adapter = "resty.acme.storage." .. autossl_config.storage_adapter
   end
-  
+
   AUTOSSL.client = client
   AUTOSSL.client_initialized = false
   AUTOSSL.config = autossl_config
@@ -404,7 +404,7 @@ function AUTOSSL.ssl_certificate()
     ngx.timer.at(0, function()
       for i, typ in ipairs(domain_key_types) do
         if not chains_set[i] then
-          local sucess, err = ev.post(events._source, events.update_cert, {
+          local success, err = ev.post(events._source, events.update_cert, {
             domain = domain,
             tries = 0,
             type = typ,
