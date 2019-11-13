@@ -22,12 +22,19 @@ function _M.new(conf)
   return self
 end
 
-function _M:set(k, v)
-  self.shm:set(k, v)
+function _M:add(k, v, ttl)
+  local _, err = self.shm:add(k, v, ttl)
+  return err
+end
+
+function _M:set(k, v, ttl)
+  local _, err = self.shm:set(k, v, ttl)
+  return err
 end
 
 function _M:delete(k)
-  self.shm:delete(k)
+  local _, err = self.shm:delete(k)
+  return err
 end
 
 function _M:get(k)

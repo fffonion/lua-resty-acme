@@ -273,6 +273,8 @@ storage_config = {
 }
 ```
 
+Redis >= 2.6.0 is required as this storage requires [PEXPIRE](https://redis.io/commands/pexpire).
+
 ### vault
 
 Hashicorp [Vault](https://www.vaultproject.io/) based storage. The default config is:
@@ -313,7 +315,6 @@ storage_config = {
 TODO
 ====
 - autossl: ocsp staping
-- storage: implement ttl?
 - openssl: add check for pkey has privkey
 
 [Back to TOC](#table-of-contents)

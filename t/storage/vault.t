@@ -8,7 +8,13 @@ my $pwd = cwd();
 
 our $HttpConfig = qq{
     lua_package_path "$pwd/lib/?.lua;$pwd/lib/?/init.lua;$pwd/../lib/?.lua;$pwd/../lib/?/init.lua;;";
+    init_by_lua_block {
+        _G.test_lib = require("resty.acme.storage.vault")
+        _G.test_cfg = {token = "root"}
+        _G.test_ttl = 1
+    }
 };
+
 
 run_tests();
 
@@ -18,8 +24,7 @@ __DATA__
 --- config
     location =/t {
         content_by_lua_block {
-            local st = require("resty.acme.storage.vault")
-            st = st.new({token = "root"})
+            local st = test_lib.new(test_cfg)
             local err = st:set("key1", "2")
             ngx.say(err)
             local err = st:set("key1", "new value")
@@ -39,8 +44,7 @@ __DATA__
 --- config
     location =/t {
         content_by_lua_block {
-            local st = require("resty.acme.storage.vault")
-            st = st.new({token = "root"})
+            local st = test_lib.new(test_cfg)
             local err = st:set("key2", "3")
             ngx.say(err)
             local v, err = st:get("key2")
@@ -63,8 +67,7 @@ nil
 --- config
     location =/t {
         content_by_lua_block {
-            local st = require("resty.acme.storage.vault")
-            st = st.new({token = "root"})
+            local st = test_lib.new(test_cfg)
             local err = st:set("key3", "3")
             ngx.say(err)
             local v, err = st:get("key3")
@@ -102,8 +105,7 @@ nil
 --- config
     location =/t {
         content_by_lua_block {
-            local st = require("resty.acme.storage.vault")
-            st = st.new({token = "root"})
+            local st = test_lib.new(test_cfg)
             local err = st:set("prefix1", "bb--")
             ngx.say(err)
             local err = st:set("pref-x2", "aa--")
@@ -133,3 +135,102 @@ prefix3
 "
 --- no_error_log
 [error]
+
+=== TEST 5: Vault set ttl
+--- http_config eval: $::HttpConfig
+--- config
+    location =/t {
+        content_by_lua_block {
+            local st = test_lib.new(test_cfg)
+            local err = st:set("setttl", "bb--", test_ttl)
+            ngx.say(err)
+            local v, err = st:get("setttl")
+            ngx.say(err)
+            ngx.say(v)
+            ngx.sleep(test_ttl)
+            local v, err = st:get("setttl")
+            ngx.say(err)
+            ngx.say(v)
+        }
+    }
+--- request
+    GET /t
+--- response_body_like eval
+"nil
+nil
+bb--
+nil
+nil
+"
+--- no_error_log
+[error]
+
+=== TEST 6: Vault add ttl
+--- http_config eval: $::HttpConfig
+--- config
+    location =/t {
+        content_by_lua_block {
+            local st = test_lib.new(test_cfg)
+            local err = st:add("addttl", "bb--", test_ttl)
+            ngx.say(err)
+            local v, err = st:get("addttl")
+            ngx.say(err)
+            ngx.say(v)
+            ngx.sleep(test_ttl)
+            local v, err = st:get("addttl")
+            ngx.say(err)
+            ngx.say(v)
+        }
+    }
+--- request
+    GET /t
+--- response_body_like eval
+"nil
+nil
+bb--
+nil
+nil
+"
+--- no_error_log
+[error]
+
+=== TEST 7: Vault add only set when key not exist
+--- http_config eval: $::HttpConfig
+--- config
+    location =/t {
+        content_by_lua_block {
+            local st = test_lib.new(test_cfg)
+            local err = st:set("prefix1", "bb--", test_ttl)
+            ngx.say(err)
+            local err = st:add("prefix1", "aa--")
+            ngx.say(err)
+            local v, err = st:get("prefix1")
+            ngx.say(err)
+            ngx.say(v)
+            ngx.sleep(test_ttl)
+            local err = st:add("prefix1", "aa--", test_ttl)
+            ngx.say(err)
+            local v, err = st:get("prefix1")
+            ngx.say(err)
+            ngx.say(v)
+            ngx.sleep(test_ttl)
+            local err = st:add("prefix1", "aa--", test_ttl)
+            ngx.say(err)
+        }
+    }
+--- request
+    GET /t
+--- response_body_like eval
+"nil
+exists
+nil
+bb--
+nil
+nil
+aa--
+nil
+"
+--- no_error_log
+[error]
+
+

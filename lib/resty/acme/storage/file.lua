@@ -20,7 +20,27 @@ local function regulate_filename(dir, s)
   return dir .. "/" .. ngx.encode_base64(s)
 end
 
-function _M:set(k, v)
+local function exists(f)
+  -- TODO: check for existence, not just able to open or not
+  local f, err = io.open(f, "rb")
+  if f then
+    f:close()
+  end
+  return err == nil
+end
+
+function _M:add(k, v, ttl)
+  local f = regulate_filename(self.dir, k)
+  if exists(f) then
+    return "exists"
+  end
+  return self:set(k, v, ttl)
+end
+
+function _M:set(k, v, ttl)
+  if ttl then
+    return "nyi"
+  end
   local f = regulate_filename(self.dir, k)
   local file, err = io.open(f, "wb")
   if err then
@@ -31,15 +51,6 @@ function _M:set(k, v)
     return err
   end
   file:close()
-end
-
-function exists(f)
-  -- TODO: check for existence, not just able to open or not
-  local f, err = io.open(f, "rb")
-  if f then
-    f:close()
-  end
-  return err == nil
 end
 
 function _M:delete(k)
@@ -57,7 +68,7 @@ function _M:get(k)
   local f = regulate_filename(self.dir, k)
   local file, err = io.open(f, "rb")
   if err then
-    ngx.log(ngx.ERR, "can't read file: ", err)
+    ngx.log(ngx.INFO, "can't read file: ", err)
     -- TODO: return nil, nil if not found
     return nil, nil
   end

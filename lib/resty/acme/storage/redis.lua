@@ -50,10 +50,32 @@ local function op(self, op, ...)
   return ok, err
 end
 
-function _M:set(k, v)
+-- TODO: use EX/NX flag if we can determine redis version (>=2.6.12)
+function _M:add(k, v, ttl)
+  local ok, err = op(self, 'setnx', k, v)
+  if err then
+    return err
+  elseif ok == 0 then
+    return "exists"
+  end
+  if ttl then
+    ok, err = op(self, 'pexpire', k, math.floor(ttl * 1000))
+    if err then
+      return err
+    end
+  end
+end
+
+function _M:set(k, v, ttl)
   local ok, err = op(self, 'set', k, v)
   if err then
     return err
+  end
+  if ttl then
+    ok, err = op(self, 'pexpire', k, math.floor(ttl * 1000))
+    if err then
+      return err
+    end
   end
 end
 

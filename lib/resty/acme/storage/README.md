@@ -11,7 +11,13 @@ function _M.new(conf)
   return self, err
 end
 
-function _M:set(k, v)
+-- set the key regardless of it's existence
+function _M:set(k, v, ttl)
+  return err
+end
+
+-- set the key only if the key doesn't exist
+function _M:add(k, v, ttl)
   return err
 end
 

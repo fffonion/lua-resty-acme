@@ -61,16 +61,49 @@ local function api(self, method, uri, payload)
   return decoded, err
 end
 
-function _M:set(k, v)
-  local res, err = api(self, "PUT", k, v)
-  if not res or err then
-    return err or "set key failed"
+local function set_cas(self, k, v, cas, ttl)
+  local params = {}
+  if ttl then
+    table.insert(params, string.format("flags=%d", (ngx.now() + ttl) * 1000))
   end
-  return nil
+  if cas then
+    table.insert(params, string.format("cas=%d", cas))
+  end
+  local uri = k
+  if #params > 0 then
+    uri = uri .. "?" .. table.concat(params, "&")
+  end
+  local res, err = api(self, "PUT", uri, v)
+  if not res or err then
+    return err or "consul returned false"
+  end
 end
 
-function _M:delete(k)
-  local res, err = api(self, "DELETE", k)
+function _M:add(k, v, ttl)
+  -- update_time is called in get()
+  -- we don't delete key automatically
+  local vget, err = self:get(k)
+  if err then
+    return "error reading key " .. err
+  end
+  if vget then
+    return "exists"
+  end
+  -- do cas for prevent race condition
+  return set_cas(self, k, v, 0, ttl)
+end
+
+function _M:set(k, v, ttl)
+  ngx.update_time()
+  return set_cas(self, k, v, nil, ttl)
+end
+
+function _M:delete(k, cas)
+  local uri = k
+  if cas then
+    uri = uri .. string.format("?cas=%d", cas)
+  end
+  local res, err = api(self, "DELETE", uri)
   if not res or err then
     return err or "delete key failed"
   end
@@ -78,10 +111,20 @@ end
 
 function _M:get(k)
   local res, err = api(self, 'GET', k)
+  ngx.update_time()
   if err then
     return nil, err
   elseif not res or not res[1] or not res[1]["Value"] then
     return nil, nil
+  elseif res[1]["Flags"] and res[1]["Flags"] > 0 and res[1]["Flags"] < ngx.now() * 1000 then
+    err = self:delete(k, res[1]["ModifyIndex"])
+    if err then
+      return nil, "error cleanup expired key ".. err
+    end
+    return nil, nil
+  end
+  if res[1]["Value"] == ngx.null then
+    return nil, err
   end
   return ngx.decode_base64(res[1]["Value"]), err
 end

@@ -65,27 +65,41 @@ local function api(self, method, uri, payload)
   return decoded, err
 end
 
-function _M:set(k, v)
-  local res, err = api(self, "POST", self.data_url .. k, {
+local function set_cas(self, k, v, cas, ttl)
+  if ttl then
+    if ttl > 0 and ttl < 1 then
+      ngx.log(ngx.WARN, "vault doesn't support ttl less than 1s, will use 1s")
+    end
+    ttl = 1
+    -- first update the metadata
+    local _, err = api(self, "POST", self.metadata_url .. k, {
+      delete_version_after = string.format("%dms", ttl * 1000)
+    })
+    -- vault doesn't seem return any useful info in this api ?
+    if err then
+      return err
+    end
+  end
+
+  local payload = {
     data = {
       value = v,
       note = "managed by lua-resty-acme",
     }
-  })
+  }
+  if cas then
+    payload.options = {
+      cas = cas,
+    }
+  end
+  local res, err = api(self, "POST", self.data_url .. k, payload)
   if not res or err then
     return err or "set key failed"
   end
   return nil
 end
 
-function _M:delete(k)
-  local res, err = api(self, "DELETE", self.metadata_url .. k)
-  if err then
-    return "delete key failed"
-  end
-end
-
-function _M:get(k)
+local function get(self, k)
   local res, err = api(self, 'GET', self.data_url .. k)
   if err then
     return nil, err
@@ -93,7 +107,47 @@ function _M:get(k)
         or not res["data"]["data"]["value"] then
     return nil, nil
   end
-  return res["data"]["data"]["value"], err
+  return res['data'], nil
+end
+
+function _M:add(k, v, ttl)
+  -- we don't delete key automatically
+  local vget, err = get(self, k)
+  if err then
+    return "error reading key " .. err
+  end
+  local revision
+  -- if there's no 'data' meaning all versions are gone, then we are good
+  if vget then
+    if vget['data'] then
+      return "exists"
+    end
+    revision = vget['metadata'] and vget['metadata']['version'] or 0
+  end
+  ngx.update_time()
+  -- do cas for prevent race condition
+  return set_cas(self, k, v, revision, ttl)
+end
+
+function _M:set(k, v, ttl)
+  ngx.update_time()
+  return set_cas(self, k, v, nil, ttl)
+end
+
+function _M:delete(k, cas)
+  -- delete metadata will delete all versions of secret as well
+  local _, err = api(self, "DELETE", self.metadata_url .. k)
+  if err then
+    return "delete key failed"
+  end
+end
+
+function _M:get(k)
+  local v, err = get(self, k)
+  if err then
+    return nil, err
+  end
+  return v and v["data"]["value"], err
 end
 
 local empty_table = {}
