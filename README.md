@@ -173,8 +173,6 @@ default_config = {
   renew_threshold = 7 * 86400,
   -- interval to check cert renewal, in seconds
   renew_check_interval = 6 * 3600,
-  -- the shm name to store worker events
-  ev_shm = 'autossl_events',
   -- the store certificates
   storage_adapter = "shm",
   -- the storage config passed to storage adapter

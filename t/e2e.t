@@ -14,7 +14,6 @@ sub ::make_http_config{
         resolver 8.8.8.8 ipv6=off;
 
         lua_shared_dict acme 16m;
-        lua_shared_dict autossl_events 128k;
 
         init_by_lua_block {
             require("resty.acme.autossl").init({
@@ -73,16 +72,16 @@ __DATA__
                 buffer_size = 256000,
             }
             local out
-            for i=0,20,1 do
+            for i=0,15,1 do
                 local proc = ngx_pipe.spawn({'bash', '-c', "echo q |openssl s_client -host 127.0.0.1 -servername ".. ngx.var.domain .. " -port 1985|openssl x509 -noout -text && sleep 0.1"}, opts)
                 local data, err, partial = proc:stdout_read_all()
                 if ngx.re.match(data, ngx.var.domain) then
                     ngx.say(data)
                     break
                 end
-                ngx.sleep(1)
+                ngx.sleep(2)
             end
-            ngx.say(out)
+            ngx.say(out or "timeout")
         }
     }
 --- request eval
@@ -123,7 +122,7 @@ __DATA__
                 buffer_size = 256000,
             }
             local out
-            for i=0,20,1 do
+            for i=0,15,1 do
                 local proc = ngx_pipe.spawn({'bash', '-c', "echo q |openssl s_client -host 127.0.0.1 -servername ".. ngx.var.domain .. " -port 1985 -cipher ECDHE-RSA-AES128-GCM-SHA256|openssl x509 -noout -text && sleep 0.1"}, opts)
                 local data, err, partial = proc:stdout_read_all()
                 if ngx.re.match(data, ngx.var.domain) then
@@ -136,9 +135,9 @@ __DATA__
                         break
                     end
                 end
-                ngx.sleep(1)
+                ngx.sleep(2)
             end
-            ngx.say(out)
+            ngx.say(out or "timeout")
         }
     }
 --- request eval

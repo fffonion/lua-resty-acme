@@ -390,7 +390,7 @@ function _M:order_certificate(domain_key, ...)
   end
 
   if order_status.status ~= "ready" then
-    return nil, "failed to create order, got status " .. (order_status.status or "nil")
+    return nil, "failed to wait for order status, got " .. (order_status.status or "nil")
   end
 
   local domain_pkey = openssl.pkey.new(domain_key)

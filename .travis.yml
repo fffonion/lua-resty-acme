@@ -55,9 +55,8 @@ install:
   - git clone https://github.com/openresty/lua-resty-lrucache.git ../lua-resty-lrucache
   - git clone https://github.com/openresty/lua-resty-redis.git ../lua-resty-redis
   - git clone -b v0.15 https://github.com/ledgetech/lua-resty-http ../lua-resty-http
-  - git clone -b 1.0.0 https://github.com/fffonion/lua-resty-worker-events ../lua-resty-worker-events
   - git clone -b 0.2.1 https://github.com/fffonion/lua-resty-openssl ../lua-resty-openssl
-  - cp -r ../lua-resty-lrucache/lib/* ../lua-resty-redis/lib/* ../lua-resty-http/lib/* ../lua-resty-worker-events/lib/* ../lua-resty-openssl/lib/* ../lib/
+  - cp -r ../lua-resty-lrucache/lib/* ../lua-resty-redis/lib/* ../lua-resty-http/lib/* ../lua-resty-openssl/lib/* ../lib/
   - find ../lib
   # luajit
   - git clone -b v2.1-agentzh https://github.com/openresty/luajit2.git
