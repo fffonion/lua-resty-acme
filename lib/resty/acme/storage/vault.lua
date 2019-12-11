@@ -13,7 +13,7 @@ function _M.new(conf)
   local prefix = conf.kv_path
   if not prefix then
     prefix = "/acme"
-  elseif path:sub(1, 1) ~= "/" then
+  elseif prefix:sub(1, 1) ~= "/" then
     prefix = "/" .. prefix
   end
   local metadata_url = base_url .. "/v1/secret/metadata" .. prefix .. "/"

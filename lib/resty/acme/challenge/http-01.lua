@@ -10,16 +10,25 @@ function _M.new(storage)
   return self
 end
 
-
-function _M:register_challenge(challenge, response)
-  return self.storage:set(challenge, response)
+local function ch_key(challenge)
+  return challenge .. "#http-01"
 end
 
-function _M:cleanup_challenge(challenge, response)
-  return self.storage:delete(challenge, response)
+
+function _M:register_challenge(challenge, response, _--[[domains]])
+  return self.storage:set(ch_key(challenge), response, 3600)
+end
+
+function _M:cleanup_challenge(challenge)
+  return self.storage:delete(ch_key(challenge))
 end
 
 function _M:serve_challenge()
+  if ngx.config.subsystem ~= "http" then
+    ngx.log(ngx.ERR, "http-01 challenge can't be used in ", ngx.config.subsystem, " subsystem")
+    ngx.exit(500)
+  end
+
   local uri = ngx.var.request_uri
 
   local captures, err =
@@ -34,7 +43,7 @@ function _M:serve_challenge()
 
   ngx.log(ngx.DEBUG, "token is ", token)
 
-  local value, err = self.storage:get(token)
+  local value, err = self.storage:get(ch_key(token))
 
   if err then
     ngx.log(ngx.ERR, "error getting challenge response from storage ", err)

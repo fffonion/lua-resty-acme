@@ -9,6 +9,7 @@ local log = ngx.log
 local ngx_ERR = ngx.ERR
 local ngx_INFO = ngx.INFO
 local ngx_DEBUG = ngx.DEBUG
+local ngx_WARN = ngx.DEBUG
 
 local _M = {
   _VERSION = '0.3.0'
@@ -78,7 +79,7 @@ function _M.new(conf)
   end
 
   -- TODO: catch error and return gracefully
-  for i, c in ipairs(conf.enabled_challenge_handlers) do
+  for _, c in ipairs(conf.enabled_challenge_handlers) do
     local handler = require("resty.acme.challenge." .. c)
     self.challenge_handlers[c] = handler.new(self.storage)
   end
@@ -129,8 +130,8 @@ function _M:jws(url, payload)
     return nil, "account key does not specified"
   end
 
-  if not url or not payload then
-    return nil, "url or payload is not defined"
+  if not url then
+    return nil, "url is not defined"
   end
 
   local nonce, err = self:new_nonce()
@@ -148,7 +149,7 @@ function _M:jws(url, payload)
   }
 
   -- TODO: much better handling
-  if payload.contact then
+  if payload and payload.contact then
     local params, err = self.account_pkey:get_parameters()
     if not params then
       return nil, "can't get parameters from account key: " .. (err or "nil")
@@ -168,7 +169,9 @@ function _M:jws(url, payload)
   log(ngx_DEBUG, "jws payload: ", json.encode(jws))
 
   jws.protected = encode_base64url(json.encode(jws.protected))
-  jws.payload = encode_base64url(json.encode(payload))
+  -- if payload is not set, we are doing a POST-as-GET (https://tools.ietf.org/html/rfc8555#section-6.3)
+  -- set it to empty string
+  jws.payload = payload and encode_base64url(json.encode(payload)) or ""
   local digest = openssl.digest.new("SHA256")
   digest:update(jws.protected .. "." .. jws.payload)
   jws.signature = encode_base64url(self.account_pkey:sign(digest))
@@ -211,7 +214,14 @@ function _M:post(url, payload, headers)
   end
   log(ngx_DEBUG, "acme request: ", url, " response: ", resp.body)
 
-  return json.decode(resp.body), resp.headers, err
+  local body
+  if resp.headers['Content-Type'] == "application/json" then
+    body = json.decode(resp.body)
+  else
+    body = resp.body
+  end
+
+  return body, resp.headers, err
 end
 
 function _M:new_account()
@@ -285,7 +295,6 @@ function _M:new_order(...)
 end
 
 function _M:finalize(finalize_url, csr)
-  local httpc = new_httpc()
   local payload = {
     csr = encode_base64url(csr)
   }
@@ -305,12 +314,13 @@ function _M:finalize(finalize_url, csr)
     return nil, "no certificate object returned " .. (resp.detail or "")
   end
 
-  local resp, err = httpc:request_uri(resp.certificate)
+  -- POST-as-GET request with empty payload
+  local body, _, err = self:post(resp.certificate)
   if err then
     return nil, err
   end
   --, key:toPEM("private"))
-  return resp.body, err
+  return body, err
 end
 
 -- create certificate workflow, used in new cert or renewal
@@ -331,13 +341,16 @@ function _M:order_certificate(domain_key, ...)
   local registered_challenge_count = 0
 
   for _, authz in ipairs(authzs) do
-    local resp, err = httpc:request_uri(authz)
+    -- POST-as-GET request with empty payload
+    local challenges, _, err = self:post(authz)
     if err then
       return nil, err
     end
 
-    local challenges = json.decode(resp.body)
     if not challenges.challenges then
+      if challenges.status ~= 200 then
+        log(ngx_WARN, "fetching challenges returns an error: ", challenges.detail)
+      end
       goto nextchallenge
     end
     for _, challenge in ipairs(challenges.challenges) do
@@ -345,7 +358,8 @@ function _M:order_certificate(domain_key, ...)
       if self.challenge_handlers[typ] then
         local err = self.challenge_handlers[typ]:register_challenge(
           challenge.token,
-          challenge.token .. "." .. self.account_thumbprint
+          challenge.token .. "." .. self.account_thumbprint,
+          {...}
         )
         if err then
           return nil, "error registering challenge: " .. err
@@ -354,7 +368,12 @@ function _M:order_certificate(domain_key, ...)
         registered_challenge_count = registered_challenge_count + 1
         log(ngx_DEBUG, "register challenge ", typ, ": ", challenge.token)
         -- signal server to start challenge check
-        local resp, _, err = self:post(challenge.url, challenge)
+        -- needs to be empty json body rather than empty string
+        -- https://tools.ietf.org/html/rfc8555#section-7.5.1
+        local _, _, err = self:post(challenge.url, {})
+        if err then
+          return nil, "error start challenge check: " .. err
+        end
       end
     end
 ::nextchallenge::
@@ -364,13 +383,13 @@ function _M:order_certificate(domain_key, ...)
     return nil, "no challenge is registered"
   end
   -- Wait until the order is ready
-  local order_status
+  local order_status, _
   for _, t in pairs({1, 1, 2, 3, 5, 8, 13, 21}) do
     ngx.sleep(t)
-    local resp, err = httpc:request_uri(order_headers["location"])
-    log(ngx_DEBUG, "check challenge: ", resp.body)
-    if resp then
-      order_status = json.decode(resp.body)
+    -- POST-as-GET request with empty payload
+    order_status, _, err = self:post(order_headers["location"])
+    log(ngx_DEBUG, "check challenge: ", json.encode(order_status))
+    if order_status then
       if order_status.status == "ready" then
         break
       elseif order_status.status == "invalid" then
@@ -417,7 +436,7 @@ function _M:order_certificate(domain_key, ...)
   return cert, nil
 end
 
-function _M:serve_http_challenge(token)
+function _M:serve_http_challenge()
   if self.challenge_handlers["http-01"] then
     self.challenge_handlers["http-01"]:serve_challenge()
   else

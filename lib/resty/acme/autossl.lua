@@ -46,6 +46,7 @@ local default_config = {
   storage_config = {
     shm_name = 'acme',
   },
+  enabled_challenge_handlers = { 'http-01' },
 }
 
 local domain_pkeys = {}
@@ -265,6 +266,7 @@ function AUTOSSL.init(autossl_config, acme_config)
     acme_config.api_uri = "https://acme-staging-v02.api.letsencrypt.org"
   end
   acme_config.account_email = autossl_config.account_email
+  acme_config.enabled_challenge_handlers = autossl_config.enabled_challenge_handlers
 
   -- cache in global variable
   domain_key_types = autossl_config.domain_key_types
@@ -325,6 +327,10 @@ end
 
 function AUTOSSL.serve_http_challenge()
   AUTOSSL.client:serve_http_challenge()
+end
+
+function AUTOSSL.serve_tls_alpn_challenge()
+  AUTOSSL.client:serve_tls_alpn_challenge()
 end
 
 
