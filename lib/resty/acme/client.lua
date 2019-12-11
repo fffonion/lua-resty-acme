@@ -337,6 +337,9 @@ function _M:order_certificate(domain_key, ...)
     end
 
     local challenges = json.decode(resp.body)
+    if not challenges.challenges then
+      goto nextchallenge
+    end
     for _, challenge in ipairs(challenges.challenges) do
       local typ = challenge.type
       if self.challenge_handlers[typ] then
@@ -352,9 +355,9 @@ function _M:order_certificate(domain_key, ...)
         log(ngx_DEBUG, "register challenge ", typ, ": ", challenge.token)
         -- signal server to start challenge check
         local resp, _, err = self:post(challenge.url, challenge)
-        break
       end
     end
+::nextchallenge::
   end
 
   if registered_challenge_count == 0 then
@@ -362,7 +365,7 @@ function _M:order_certificate(domain_key, ...)
   end
   -- Wait until the order is ready
   local order_status
-  for _, t in pairs({1, 1, 2, 3, 5, 8, 13}) do
+  for _, t in pairs({1, 1, 2, 3, 5, 8, 13, 21}) do
     ngx.sleep(t)
     local resp, err = httpc:request_uri(order_headers["location"])
     log(ngx_DEBUG, "check challenge: ", resp.body)
