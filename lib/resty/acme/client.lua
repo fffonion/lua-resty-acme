@@ -12,7 +12,7 @@ local ngx_DEBUG = ngx.DEBUG
 local ngx_WARN = ngx.DEBUG
 
 local _M = {
-  _VERSION = '0.3.0'
+  _VERSION = '0.4.1'
 }
 local mt = {__index = _M}
 
