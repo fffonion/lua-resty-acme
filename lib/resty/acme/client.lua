@@ -325,7 +325,6 @@ end
 
 -- create certificate workflow, used in new cert or renewal
 function _M:order_certificate(domain_key, ...)
-  local httpc = new_httpc()
   -- create new-order request
   local order_body, order_headers, err = self:new_order(...)
   if err then
@@ -393,16 +392,23 @@ function _M:order_certificate(domain_key, ...)
       if order_status.status == "ready" then
         break
       elseif order_status.status == "invalid" then
-        -- local errors = {}
-        -- for _, c in ipairs(order_status.challenges) do
-        --   local err = c['type'] .. ": " .. c['status']
-        --   if c['error'] and c['error']['detail'] then
-        --     err = err .. "detail: " .. c['error']['detail']
-        --   end
-        --   errors[#errors+1] = err
-        -- end
-        -- return nil,  "invalid: ", table.concat(errors, "; ")
-        return nil, "challenge invalid"
+        local errors = {}
+        for _, authz in ipairs(order_status.authorizations) do
+          local authz_status, _, err = self:post(authz)
+          if err then
+            log(ngx_WARN, "error fetching authorization final status:", err)
+          else
+            for _, c in ipairs(authz_status.challenges) do
+              log(ngx_DEBUG, "authorization status: ", json.encode(c))
+              local err_msg = c['type'] .. ": " .. c['status']
+              if c['error'] and c['error']['detail'] then
+                err_msg = err_msg .. ": " .. c['error']['detail']
+              end
+              errors[#errors+1] = err_msg
+            end
+          end
+        end
+        return nil, "challenge invalid: " .. table.concat(errors, "; ")
       end
     end
   end
