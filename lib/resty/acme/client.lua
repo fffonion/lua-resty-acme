@@ -217,6 +217,9 @@ function _M:post(url, payload, headers)
   local body
   if resp.headers['Content-Type'] == "application/json" then
     body = json.decode(resp.body)
+  elseif resp.headers['Content-Type'] == "application/problem+json" then
+    body = json.decode(resp.body)
+    return nil, nil, body.detail or body.type
   else
     body = resp.body
   end
@@ -287,10 +290,6 @@ function _M:new_order(...)
     return nil, nil, err
   end
 
-  if body.status and tonumber(body.status) then
-    return nil, nil, "error creating order: " .. body.detail
-  end
-
   return body, headers, nil
 end
 
@@ -347,9 +346,7 @@ function _M:order_certificate(domain_key, ...)
     end
 
     if not challenges.challenges then
-      if challenges.status ~= 200 then
-        log(ngx_WARN, "fetching challenges returns an error: ", challenges.detail)
-      end
+      log(ngx_WARN, "fetching challenges returns an error: ", err)
       goto nextchallenge
     end
     for _, challenge in ipairs(challenges.challenges) do
