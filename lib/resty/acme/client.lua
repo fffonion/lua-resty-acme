@@ -430,6 +430,8 @@ function _M:order_certificate(domain_key, ...)
     return nil, err
   end
 
+  log(ngx_DEBUG, "order is completed: ", order_headers["location"])
+
   for _, token in ipairs(registered_challenges) do
     for _, ch in pairs(self.challenge_handlers) do
       ch:cleanup_challenge(token)

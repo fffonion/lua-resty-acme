@@ -196,10 +196,15 @@ function AUTOSSL.update_cert(data)
     AUTOSSL.client_initialized = true
   end
 
-  local lock_key = update_cert_lock_key_prefix .. data.type .. ":" .. data.domain
-  local err = AUTOSSL.storage:add(lock_key, CERTS_CACHE_NEG_TTL)
+  -- Note that we lock regardless of key types
+  -- Let's encrypt tends to have a (undocumented?) behaviour that if
+  -- you submit an order with different CSR while the previous order is still pending
+  -- you will get the previous order (with `expires` capped to an integer second).
+  local lock_key = update_cert_lock_key_prefix .. ":" .. data.domain
+  local err = AUTOSSL.storage:add(lock_key, "1", CERTS_CACHE_NEG_TTL)
   if err then
-    ngx.log(ngx.INFO, "update is already running (lock key ", lock_key, " exists)")
+    ngx.log(ngx.INFO,
+      "update is already running (lock key ", lock_key, " exists), current type ", data.type)
     return nil
   end
 
