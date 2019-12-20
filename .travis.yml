@@ -6,13 +6,14 @@ os: linux
 language: c
 compiler: gcc
 
-services:
- - redis-server
+services:	
+ - redis-server	
  - docker
 
 cache:
   directories:
-  - download-cache
+  - cache
+  - /opt/ssl
 
 env:
   global:
@@ -35,21 +36,21 @@ env:
     - NGINX_VERSION=1.15.8 OPENSSL_VER=1.1.0l
     - NGINX_VERSION=1.15.8 OPENSSL_VER=1.1.1d
 
-before_install:
-  - docker run -d -e CONSUL_CLIENT_INTERFACE='eth0' -e CONSUL_BIND_INTERFACE='eth0' -p 127.0.0.1:8500:8500 consul agent -server -bootstrap-expect=1
+before_install:	
+  - docker run -d -e CONSUL_CLIENT_INTERFACE='eth0' -e CONSUL_BIND_INTERFACE='eth0' -p 127.0.0.1:8500:8500 consul agent -server -bootstrap-expect=1	
   - docker run -d --user root --cap-add=IPC_LOCK -e VAULT_DEV_ROOT_TOKEN_ID=root --name=ctmpl-vault -p 127.0.0.1:8200:8200 vault server -dev
 
 install:
   - export NGX_BUILD_CC=$CC
-  - export PATH=$PWD/work/nginx/sbin:$PWD/nginx-devel-utils:$PATH
+  - export PATH=$PWD/cache/work/nginx/sbin:$PWD/nginx-devel-utils:$PATH
   - sudo apt-get install -qq -y cpanminus axel
   - sudo cpanm --notest Test::Nginx > build.log 2>&1 || (cat build.log && exit 1)
-  - git clone https://github.com/openresty/openresty.git ../openresty
+  - git clone https://github.com/openresty/openresty.git ./openresty
   - git clone https://github.com/openresty/nginx-devel-utils.git
-  - git clone https://github.com/simpl/ngx_devel_kit.git ../ndk-nginx-module
-  - git clone https://github.com/openresty/lua-nginx-module.git ../lua-nginx-module
+  - git clone https://github.com/simpl/ngx_devel_kit.git ./ndk-nginx-module
+  - git clone https://github.com/openresty/lua-nginx-module.git ./lua-nginx-module
+  - git clone https://github.com/openresty/no-pool-nginx.git ./no-pool-nginx
   - git clone https://github.com/openresty/lua-resty-core.git ../lua-resty-core
-  - git clone https://github.com/openresty/no-pool-nginx.git ../no-pool-nginx
   # lua libraries
   - mkdir ../lib
   - git clone https://github.com/openresty/lua-resty-lrucache.git ../lua-resty-lrucache
@@ -58,31 +59,33 @@ install:
   - git clone -b 0.2.1 https://github.com/fffonion/lua-resty-openssl ../lua-resty-openssl
   - cp -r ../lua-resty-lrucache/lib/* ../lua-resty-redis/lib/* ../lua-resty-http/lib/* ../lua-resty-openssl/lib/* ../lib/
   - find ../lib
+  # openssl
+  # openssl 1.0.2 config doesn't work correctly on a cached directory
+  - wget https://www.openssl.org/source/openssl-$OPENSSL_VER.tar.gz -O - | tar zxf -
+  - pushd openssl-$OPENSSL_VER/
+  - if [ ! -e $OPENSSL_PREFIX/include ]; then ./config shared --prefix=$OPENSSL_PREFIX -DPURIFY > build.log 2>&1 || (cat build.log && exit 1); fi
+  - if [ ! -e $OPENSSL_PREFIX/include ]; then make -j$JOBS > build.log 2>&1 || (cat build.log && exit 1); fi
+  - if [ ! -e $OPENSSL_PREFIX/include ]; then sudo make PATH=$PATH install_sw > build.log 2>&1 || (cat build.log && exit 1); fi
+  - popd
+  - pushd cache
   # luajit
-  - git clone -b v2.1-agentzh https://github.com/openresty/luajit2.git
+  - if [ ! -e luajit2 ]; then git clone -b v2.1-agentzh https://github.com/openresty/luajit2.git; fi
   - pushd luajit2/
-  - make -j$JOBS CCDEBUG=-g Q= PREFIX=$LUAJIT_PREFIX CC=$CC XCFLAGS='-DLUA_USE_APICHECK -DLUA_USE_ASSERT' > build.log 2>&1 || (cat build.log && exit 1)
+  - make -j$JOBS CCDEBUG=-g Q= PREFIX=$LUAJIT_PREFIX CC=$CC XCFLAGS='-DLUA_USE_APICHECK -DLUA_USE_ASSERT -DLUAJIT_ENABLE_LUA52COMPAT' > build.log 2>&1 || (cat build.log && exit 1)
   - make install PREFIX=$LUAJIT_PREFIX > build.log 2>&1 || (cat build.log && exit 1)
   - popd
   # lua-cjson
-  - git clone https://github.com/openresty/lua-cjson.git ../lua-cjson
+  - if [ ! -e lua-cjson ]; then git clone https://github.com/openresty/lua-cjson.git ../lua-cjson; fi
   - pushd ../lua-cjson && make && sudo PATH=$PATH make install && popd
-  # openssl
-  - if [ ! -f download-cache/openssl-$OPENSSL_VER.tar.gz ]; then wget -O download-cache/openssl-$OPENSSL_VER.tar.gz https://www.openssl.org/source/openssl-$OPENSSL_VER.tar.gz; fi
-  - tar zxf download-cache/openssl-$OPENSSL_VER.tar.gz
-  - pushd openssl-$OPENSSL_VER/
-  - ./config shared --prefix=$OPENSSL_PREFIX -DPURIFY > build.log 2>&1 || (cat build.log && exit 1)
-  - make -j$JOBS > build.log 2>&1 || (cat build.log && exit 1)
-  - sudo make PATH=$PATH install_sw > build.log 2>&1 || (cat build.log && exit 1)
-  - popd
   # nginx
-  - ngx-build $NGINX_VERSION --add-module=../ndk-nginx-module --add-module=../lua-nginx-module --with-http_ssl_module --with-cc-opt="-I$OPENSSL_INC" --with-ld-opt="-L$OPENSSL_LIB -Wl,-rpath,$OPENSSL_LIB" --with-debug > build.log 2>&1 || (cat build.log && exit 1)
+  - if [ ! -e work ]; then ngx-build $NGINX_VERSION --add-module=../ndk-nginx-module --add-module=../lua-nginx-module --with-http_ssl_module --with-cc-opt="-I$OPENSSL_INC" --with-ld-opt="-L$OPENSSL_LIB -Wl,-rpath,$OPENSSL_LIB" --with-debug > build.log 2>&1 || (cat build.log && exit 1); fi
   - nginx -V
   - ldd `which nginx`|grep -E 'luajit|ssl|pcre'
+  - popd
 
 script:
   - export SUBDOMAIN=acme-ci-${TRAVIS_BUILD_ID}-${RANDOM}
   # TEST_NGINX_PORT by Test::Nginx seems not working properly?
   - export NGINX_PORT=61984
-  - CACHE_DIR=download-cache bash t/prepare_travis.sh
+  - CACHE_DIR=cache bash t/prepare_travis.sh
   - TEST_NGINX_TIMEOUT=60 prove -j$JOBS -r t/
