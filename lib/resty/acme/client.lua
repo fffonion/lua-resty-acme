@@ -12,7 +12,7 @@ local ngx_DEBUG = ngx.DEBUG
 local ngx_WARN = ngx.DEBUG
 
 local _M = {
-  _VERSION = '0.4.2'
+  _VERSION = '0.4.3'
 }
 local mt = {__index = _M}
 
@@ -181,7 +181,7 @@ end
 
 --- ACME wrapper for http.post()
 --
--- @param service   ACME service name as is listed in directory
+-- @param url       ACME service URL
 -- @param payload   Request content
 -- @param headers   Lua table with request headers
 --
