@@ -39,7 +39,7 @@ local function create_csr(domain_pkey, ...)
   local subject = openssl.name.new()
   local _, err = subject:add("CN", domains[1])
   if err then
-    return nil, err
+    return nil, "failed to add subject name: " .. err
   end
 
   local alt, err
@@ -52,7 +52,7 @@ local function create_csr(domain_pkey, ...)
     for _, domain in pairs(domains) do
       _, err = alt:add("DNS", domain)
       if err then
-        return nil, err
+        return nil, "failed to add altname: " .. err
       end
     end
   end
@@ -60,23 +60,23 @@ local function create_csr(domain_pkey, ...)
   local csr = openssl.csr.new()
   err = csr:set_subject_name(subject)
   if err then
-    return nil, err
+    return nil, "failed to set_subject_name: " .. err
   end
   if alt then
     err = csr:set_subject_alt(alt)
     if err then
-      return nil, err
+      return nil, "failed to set_subject_alt: " .. err
     end
   end
 
   err = csr:set_pubkey(domain_pkey)
   if err then
-    return nil, err
+    return nil, "failed to set_pubkey: " .. err
   end
 
   err = csr:sign(domain_pkey)
   if err then
-    return nil, err
+    return nil, "failed to sign: " .. err
   end
 
   return csr:tostring("DER"), nil

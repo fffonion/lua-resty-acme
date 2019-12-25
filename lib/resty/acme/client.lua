@@ -86,7 +86,7 @@ function _M.new(conf)
 
   local account_thumbprint, err = util.thumbprint(self.account_pkey)
   if err then
-    return nil, err
+    return nil, "failed to calculate thumbprint: " .. err
   end
 
   self.account_thumbprint = account_thumbprint
@@ -240,7 +240,7 @@ function _M:new_account()
   )
 
   if err then
-    return nil, err
+    return nil, "failed to create account: " .. err
   end
 
   self.account_kid = headers["location"]
@@ -262,7 +262,7 @@ function _M:new_nonce()
     -- TODO: Expect content size 0
     return resp.headers["replay-nonce"]
   else
-    return nil, err
+    return nil, "failed to fetch new nonce: " .. err
   end
 end
 
@@ -301,7 +301,7 @@ function _M:finalize(finalize_url, csr)
   local resp, headers, err = self:post(finalize_url, payload)
 
   if err then
-    return nil, err
+    return nil, "failed to send finalize request: " .. err
   end
 
   if not headers["content-type"] == "application/pem-certificate-chain" then
@@ -316,7 +316,7 @@ function _M:finalize(finalize_url, csr)
   -- POST-as-GET request with empty payload
   local body, _, err = self:post(resp.certificate)
   if err then
-    return nil, err
+    return nil, "failed to fetch certificate: " .. err
   end
   --, key:toPEM("private"))
   return body, err
@@ -327,7 +327,7 @@ function _M:order_certificate(domain_key, ...)
   -- create new-order request
   local order_body, order_headers, err = self:new_order(...)
   if err then
-    return nil, err
+    return nil, "failed to create new order: " .. err
   end
 
   log(ngx_DEBUG, "new order: ", json.encode(order_body))
@@ -342,7 +342,7 @@ function _M:order_certificate(domain_key, ...)
     -- POST-as-GET request with empty payload
     local challenges, _, err = self:post(authz)
     if err then
-      return nil, err
+      return nil, "failed to fetch authz: " .. err
     end
 
     if not challenges.challenges then
@@ -422,7 +422,7 @@ function _M:order_certificate(domain_key, ...)
 
   local csr, err = util.create_csr(domain_pkey, ...)
   if err then
-    return nil, err
+    return nil, "failed to create csr: " .. err
   end
 
   local cert, err = self:finalize(finalize_url, csr)
