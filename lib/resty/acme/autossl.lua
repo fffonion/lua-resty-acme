@@ -70,7 +70,10 @@ local update_cert_lock_key_prefix = "update_lock:"
 local domain_cache_key_prefix = "domain:"
 
 -- get cert and key cdata with caching
-local function get_certkey(domain, typ)
+-- domain, typ, raw
+local function get_certkey(opts)
+  local typ = opts.type
+  local domain = opts.domain
   local data, _ --[[stale]], _ --[[flags]] = certs_cache[typ]:get(domain)
   if data then
     return data, nil
@@ -95,6 +98,11 @@ local function get_certkey(domain, typ)
     if not deserialized then
       err_ret = "failed to deserialize cert key from storage"
       break
+    end
+
+    -- raw returns unparsed pem text
+    if opts.raw then
+      return deserialized
     end
 
     local pkey, err = ssl.parse_pem_priv_key(deserialized.pkey)
@@ -131,7 +139,7 @@ local function update_cert_handler(data)
   local pkey
 
   if data.renew then
-    local certkey, err = get_certkey(domain, typ)
+    local certkey, err = get_certkey({ domain = domain, type = typ, raw = true })
     if err then
       log(ngx_ERR, "failed to read ", typ, " cert for domain: ", err)
     elseif not certkey or certkey == null then
@@ -355,7 +363,7 @@ function AUTOSSL.ssl_certificate()
   local chains_set = {}
 
   for i, typ in ipairs(domain_key_types) do
-    local certkey, err = get_certkey(domain, typ)
+    local certkey, err = get_certkey({ domain = domain, type = typ })
     if err then
       log(ngx_ERR, "can't read key and cert from storage ", err)
     elseif certkey == null then
