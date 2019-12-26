@@ -418,7 +418,10 @@ function _M:order_certificate(domain_key, ...)
     return nil, "failed to wait for order status, got " .. (order_status.status or "nil")
   end
 
-  local domain_pkey = openssl.pkey.new(domain_key)
+  local domain_pkey, err = openssl.pkey.new(domain_key)
+  if err then
+    return nil, "failed to load domain pkey: " .. err
+  end
 
   local csr, err = util.create_csr(domain_pkey, ...)
   if err then
