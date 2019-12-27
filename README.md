@@ -20,7 +20,7 @@ Table of Contents
 Description
 ===========
 
-This library consits of two parts:
+This library consists of two parts:
 
 - `resty.acme.autossl`: automatic lifecycle management of Let's Encrypt certificates
 - `resty.acme.client`: Lua implementation of ACME v2 protocol
@@ -195,7 +195,13 @@ See also [Storage Adapters](#storage-adapters) below.
 
 ## resty.acme.client
 
-A config table can be passed to `resty.acme.client.new()`, the default values are:
+### client.new
+
+**syntax**: *c, err = client.new(config)*
+
+Create a ACMEv2 client.
+
+Default values for `config` are:
 
 ```lua
 default_config = {
@@ -223,6 +229,33 @@ new account. Note that when using the same `account_key`, `client:new_account()`
 will return the same `kid` that is previosuly registered.
 
 See also [Storage Adapters](#storage-adapters) below.
+
+[Back to TOC](#table-of-contents)
+
+### client:init
+
+**syntax**: *err = client:init()*
+
+Initialize the client, requires availability of cosocket API. This function will
+login or register an account.
+
+[Back to TOC](#table-of-contents)
+
+### client:order_certificate
+
+**syntax**: *err = client:order_certificate(domain,...)*
+
+Create a certificate with one or more domains. Note that wildcard domains are not
+supported as it can only be verified by [dns-01](https://letsencrypt.org/docs/challenge-types/) challenge.
+
+[Back to TOC](#table-of-contents)
+
+### client:serve_http_challenge
+
+**syntax**: *client:serve_http_challenge()*
+
+Serve [http-01](https://letsencrypt.org/docs/challenge-types/) challenge. A common use case will be to
+put this as a content_by_* block for `/.well-known` path.
 
 [Back to TOC](#table-of-contents)
 
