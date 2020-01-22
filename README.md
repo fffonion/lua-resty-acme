@@ -31,15 +31,14 @@ Install using opm:
 opm install fffonion/lua-resty-acme
 ```
 
-This library uses [an FFI-based openssl backend](https://github.com/fffonion/lua-resty-openssl),
-which currently supports OpenSSL `1.1.1`, `1.1.0` and `1.0.2` series.
-
-
 Alternatively, to install using luarocks:
 
 ```shell
 luarocks install lua-resty-acme
 ```
+
+This library uses [an FFI-based openssl backend](https://github.com/fffonion/lua-resty-openssl),
+which currently supports OpenSSL `1.1.1`, `1.1.0` and `1.0.2` series.
 
 
 [Back to TOC](#table-of-contents)
@@ -70,7 +69,6 @@ http {
     resolver 8.8.8.8 ipv6=off;
 
     lua_shared_dict acme 16m;
-    lua_shared_dict autossl_events 128k;
 
     init_by_lua_block {
         require("resty.acme.autossl").init({
@@ -86,18 +84,19 @@ http {
             domain_whitelist = { "example.com" },
         })
     }
+
     init_worker_by_lua_block {
         require("resty.acme.autossl").init_worker()
     }
-
-    # required to verify Let's Encrypt API
-    lua_ssl_trusted_certificate /etc/ssl/certs/ca-certificates.crt;
-    lua_ssl_verify_depth 2;
 
     server {
         listen 80;
         listen 443 ssl;
         server_name example.com;
+
+        # required to verify Let's Encrypt API
+        lua_ssl_trusted_certificate /etc/ssl/certs/ca-certificates.crt;
+        lua_ssl_verify_depth 2;
 
         # fallback certs, make sure to create them before hand
         ssl_certificate /etc/openresty/default.pem;
