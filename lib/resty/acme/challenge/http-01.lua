@@ -19,7 +19,7 @@ function _M:register_challenge(challenge, response, _--[[domains]])
   return self.storage:set(ch_key(challenge), response, 3600)
 end
 
-function _M:cleanup_challenge(challenge)
+function _M:cleanup_challenge(challenge, _--[[domains]])
   return self.storage:delete(ch_key(challenge))
 end
 

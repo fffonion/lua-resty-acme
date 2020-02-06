@@ -2,6 +2,8 @@
 
 Automatic Let's Encrypt certificate serving (RSA + ECC) and pure Lua implementation of the ACMEv2 protocol.
 
+`http-01` and `tls-alpn-01` challenges are supported.
+
 ![Build Status](https://travis-ci.com/fffonion/lua-resty-acme.svg?branch=master) ![luarocks](https://img.shields.io/luarocks/v/fffonion/lua-resty-acme?color=%232c3e67)
 
 [简体中文](https://yooooo.us/2019/lua-resty-acme)
@@ -79,6 +81,8 @@ http {
             -- staging = true,
             -- uncomment folloing to enable RSA + ECC double cert
             -- domain_key_types = { 'rsa', 'ecc' },
+            -- uncomment following to enable tls-alpn-01 challenge
+            -- enabled_challenge_handlers = { 'http-01', 'tls-alpn-01' },
             account_key_path = "/etc/openresty/account.key",
             account_email = "youemail@youdomain.com",
             domain_whitelist = { "example.com" },
@@ -140,6 +144,142 @@ domain_whitelist = setmetatable({}, { __index = function(_, k)
     return ngx.re.match(k, [[\.example\.com$]], "jo")
 end}),
 ```
+
+## tls-alpn-01 challenge
+
+<details>
+  <summary>Click to expand sample config</summary>
+
+```lua
+events {}
+
+http {
+    resolver 8.8.8.8 ipv6=off;
+
+    lua_shared_dict acme 16m;
+    lua_shared_dict autossl_events 128k;
+
+    init_by_lua_block {
+        require("resty.acme.autossl").init({
+            -- setting the following to true
+            -- implies that you read and accepted https://letsencrypt.org/repository/
+            tos_accepted = true,
+            -- uncomment following for first time setup
+            -- staging = true,
+            -- uncomment folloing to enable RSA + ECC double cert
+            -- domain_key_types = { 'rsa', 'ecc' },
+            -- uncomment following to enable tls-alpn-01 challenge
+            -- enabled_challenge_handlers = { 'http-01', 'tls-alpn-01' },
+            account_key_path = "/etc/openresty/account.key",
+            account_email = "youemail@youdomain.com",
+            domain_whitelist = { "example.com" },
+            storage_adapter = "file",
+        })
+    }
+    init_worker_by_lua_block {
+        require("resty.acme.autossl").init_worker()
+    }
+
+    # required to verify Let's Encrypt API
+    lua_ssl_trusted_certificate /etc/ssl/certs/ca-certificates.crt;
+    lua_ssl_verify_depth 2;
+
+    server {
+        listen 80;
+        listen unix:/tmp/nginx-default.sock ssl;
+        server_name example.com;
+
+        # fallback certs, make sure to create them before hand
+        ssl_certificate /etc/openresty/default.pem;
+        ssl_certificate_key /etc/openresty/default.key;
+
+        ssl_certificate_by_lua_block {
+            require("resty.acme.autossl").ssl_certificate()
+        }
+
+        location /.well-known {
+            content_by_lua_block {
+                require("resty.acme.autossl").serve_http_challenge()
+            }
+        }
+    }
+}
+
+stream {
+    lua_shared_dict autossl_events 128k;
+    init_worker_by_lua_block {
+
+        require("resty.acme.autossl").init({
+            -- setting the following to true
+            -- implies that you read and accepted https://letsencrypt.org/repository/
+            tos_accepted = true,
+            -- uncomment following for first time setup
+            -- staging = true,
+            -- uncomment folloing to enable RSA + ECC double cert
+            -- domain_key_types = { 'rsa', 'ecc' },
+            -- uncomment following to enable tls-alpn-01 challenge
+            enabled_challenge_handlers = { 'http-01', 'tls-alpn-01' },
+            account_key_path = "/etc/openresty/account.key",
+            account_email = "youemail@youdomain.com",
+            domain_whitelist = { "example.com" },
+            storage_adapter = "file"
+        })
+        require("resty.acme.autossl").init_worker()
+    }
+
+    map $ssl_preread_alpn_protocols $backend {
+        ~\bacme-tls/1\b unix:/tmp/nginx-tls-alpn.sock;
+        default unix:/tmp/nginx-default.sock;
+    }
+
+    server {
+            listen 443;
+            listen [::]:443;
+
+            ssl_preread on;
+            proxy_pass $backend;
+    }
+
+    server {
+            listen unix:/tmp/nginx-tls-alpn.sock ssl;
+            ssl_certificate certs/default.pem;
+            ssl_certificate_key certs/default.key;
+
+            ssl_certificate_by_lua_block {
+                    require("resty.acme.autossl").serve_tls_alpn_challenge()
+            }
+
+            content_by_lua_block {
+                    ngx.exit(0)
+            }
+    }
+}
+```
+
+</details>
+
+In the above sample config, we set a http server and two stream server.
+
+The very front stream server listens for 443 port and route to different upstream
+based on client ALPN. The tls-alpn-01 responder listens on `unix:/tmp/nginx-tls-alpn.sock`.
+All normal https traffic listens on `unix:/tmp/nginx-default.sock`.
+
+```
+                                                [stream server unix:/tmp/nginx-tls-alpn.sock ssl]
+                                            Y / 
+[stream server 443] --- ALPN is acme-tls ?
+                                            N \
+                                                [http server unix:/tmp/nginx-default.sock ssl]
+```
+
+- The config passed to `require("resty.acme.autossl").init` in both subsystem should be
+kept same as possible.
+- `tls-alpn-01` challenge handler doesn't need any third party dependency.
+- You can enable `http-01` and `tls-alpn-01` challenge handlers at the same time.
+- `http` and `stream` subsystem doesn't share shm, thus considering use a storage other
+than `shm`. If you must use `shm`, you will need to apply
+[this patch](https://github.com/fffonion/lua-resty-shdict-server/tree/master/patches).
+- `tls-alpn-01` challenge handler is considered experiemental.
 
 ## resty.acme.autossl
 
@@ -218,7 +358,7 @@ default_config = {
   storage_config = {
     shm_name = "acme"
   },
-  -- the challenge types enabled
+  -- the challenge types enabled, selection of `http-01` and `tls-alpn-01`
   enabled_challenge_handlers = {"http-01"}
 }
 ```

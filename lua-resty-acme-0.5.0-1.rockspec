@@ -1,5 +1,5 @@
 package = "lua-resty-acme"
-version = "0.4.3-1"
+version = "0.5.0-1"
 source = {
    url = "git+https://github.com/fffonion/lua-resty-acme.git"
 }
@@ -33,5 +33,5 @@ build = {
 dependencies = {
    "lua-resty-http >= 0.15-0",
    "lua-resty-lrucache >= 0.09-2",
-   "lua-resty-openssl >= 0.2.1-1",
+   "lua-resty-openssl >= 0.5.2",
 }

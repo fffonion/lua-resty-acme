@@ -12,7 +12,7 @@ local ngx_DEBUG = ngx.DEBUG
 local ngx_WARN = ngx.DEBUG
 
 local _M = {
-  _VERSION = '0.4.3'
+  _VERSION = '0.5.0'
 }
 local mt = {__index = _M}
 
@@ -437,7 +437,7 @@ function _M:order_certificate(domain_key, ...)
 
   for _, token in ipairs(registered_challenges) do
     for _, ch in pairs(self.challenge_handlers) do
-      ch:cleanup_challenge(token)
+      ch:cleanup_challenge(token, {...})
     end
   end
 
@@ -449,6 +449,15 @@ function _M:serve_http_challenge()
     self.challenge_handlers["http-01"]:serve_challenge()
   else
     log(ngx_ERR, "http-01 handler is not enabled")
+    ngx.exit(500)
+  end
+end
+
+function _M:serve_tls_alpn_challenge()
+  if self.challenge_handlers["tls-alpn-01"] then
+    self.challenge_handlers["tls-alpn-01"]:serve_challenge()
+  else
+    log(ngx_ERR, "tls-alpn-01 handler is not enabled")
     ngx.exit(500)
   end
 end

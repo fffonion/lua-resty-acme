@@ -1,7 +1,7 @@
 local openssl = require("resty.acme.openssl")
 
 -- https://tools.ietf.org/html/rfc8555 Page 10
--- Binary fields in the JSON objects used by _M are encoded using
+-- Binary fields in the JSON objects used by acme are encoded using
 -- base64url encoding described in Section 5 of [RFC4648] according to
 -- the profile specified in JSON Web Signature in Section 2 of
 -- [RFC7515].  This encoding uses a URL safe character set.  Trailing
@@ -42,7 +42,7 @@ local function create_csr(domain_pkey, ...)
     return nil, "failed to add subject name: " .. err
   end
 
-  local alt, err
+  local alt, ok, err
   if #{...} > 1 then
     alt, err = openssl.altname.new()
     if err then
@@ -58,23 +58,23 @@ local function create_csr(domain_pkey, ...)
   end
 
   local csr = openssl.csr.new()
-  err = csr:set_subject_name(subject)
+  _, err = csr:set_subject_name(subject)
   if err then
     return nil, "failed to set_subject_name: " .. err
   end
   if alt then
-    err = csr:set_subject_alt(alt)
+    _, err = csr:set_subject_alt_name(alt)
     if err then
       return nil, "failed to set_subject_alt: " .. err
     end
   end
 
-  err = csr:set_pubkey(domain_pkey)
+  _, err = csr:set_pubkey(domain_pkey)
   if err then
     return nil, "failed to set_pubkey: " .. err
   end
 
-  err = csr:sign(domain_pkey)
+  _, err = csr:sign(domain_pkey)
   if err then
     return nil, "failed to sign: " .. err
   end
