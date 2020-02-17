@@ -306,7 +306,7 @@ function AUTOSSL.init(autossl_config, acme_config)
       end
       domain_key_f:close()
       -- sanity check of the pem content, will error out if it's invalid
-      openssl.pkey.new(domain_key_pem)
+      assert(openssl.pkey.new(domain_key_pem))
       domain_pkeys[typ] = domain_key_pem
     end
     -- initialize worker cache table

@@ -34,7 +34,7 @@ function _M:serve_challenge()
   local captures, err =
     ngx.re.match(ngx.var.request_uri, [[\.well-known/]] .. self.uri_prefix .. "/(.+)", "jo")
 
-  if err or not captures[1] then
+  if err or not captures or not captures[1] then
     ngx.log(ngx.ERR, "error extracting token from request_uri ", err)
     ngx.exit(400)
   end
