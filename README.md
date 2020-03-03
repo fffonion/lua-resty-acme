@@ -4,7 +4,7 @@ Automatic Let's Encrypt certificate serving (RSA + ECC) and pure Lua implementat
 
 `http-01` and `tls-alpn-01` challenges are supported.
 
-![Build Status](https://travis-ci.com/fffonion/lua-resty-acme.svg?branch=master) ![luarocks](https://img.shields.io/luarocks/v/fffonion/lua-resty-acme?color=%232c3e67)
+![Build Status](https://travis-ci.com/fffonion/lua-resty-acme.svg?branch=master) ![luarocks](https://img.shields.io/luarocks/v/fffonion/lua-resty-acme?color=%232c3e67) ![opm](https://img.shields.io/opm/v/fffonion/lua-resty-acme?color=%23599059)
 
 [简体中文](https://yooooo.us/2019/lua-resty-acme)
 
