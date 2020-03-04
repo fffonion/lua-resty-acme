@@ -11,7 +11,7 @@ our $HttpConfig = qq{
     init_by_lua_block {
         _G.test_lib = require("resty.acme.storage.file")
         _G.test_cfg = nil
-        _G.test_ttl = 0.1
+        _G.test_ttl = 1
     }
 };
 
@@ -99,61 +99,7 @@ nil
 --- no_error_log
 [error]
 
-=== TEST 4: File list keys NYI
---- http_config eval: $::HttpConfig
---- config
-    location =/t {
-        content_by_lua_block {
-            local st = test_lib.new(test_cfg)
-            local keys, err = st:list("prefix")
-            ngx.say(err)
-        }
-    }
---- request
-    GET /t
---- response_body_like eval
-"nyi
-"
---- no_error_log
-[error]
-
-=== TEST 5: File set ttl NYI
---- http_config eval: $::HttpConfig
---- config
-    location =/t {
-        content_by_lua_block {
-            local st = test_lib.new(test_cfg)
-            local err = st:set("setttl", "bb--", test_ttl)
-            ngx.say(err)
-        }
-    }
---- request
-    GET /t
---- response_body_like eval
-"nyi
-"
---- no_error_log
-[error]
-
-=== TEST 6: File add ttl NYI
---- http_config eval: $::HttpConfig
---- config
-    location =/t {
-        content_by_lua_block {
-            local st = test_lib.new(test_cfg)
-            local err = st:add("addttl", "bb--", test_ttl)
-            ngx.say(err)
-        }
-    }
---- request
-    GET /t
---- response_body_like eval
-"nyi
-"
---- no_error_log
-[error]
-
-=== TEST 7: File add only set when key not exist (no ttl support)
+=== TEST 4: File list keys
 --- http_config eval: $::HttpConfig
 --- config
     location =/t {
@@ -161,11 +107,114 @@ nil
             local st = test_lib.new(test_cfg)
             local err = st:set("prefix1", "bb--")
             ngx.say(err)
+            local err = st:set("pref-x2", "aa--")
+            ngx.say(err)
+            local err = st:set("prefix3", "aa--")
+            ngx.say(err)
+
+            local keys, err = st:list("prefix")
+            ngx.say(err)
+            table.sort(keys)
+            for _, p in ipairs(keys) do ngx.say(p) end
+
+            local keys, err = st:list("nonexistent")
+            ngx.say(#keys)
+        }
+    }
+--- request
+    GET /t
+--- response_body_like eval
+"nil
+nil
+nil
+nil
+prefix1
+prefix3
+0
+"
+--- no_error_log
+[error]
+
+=== TEST 5: File set ttl
+--- http_config eval: $::HttpConfig
+--- config
+    location =/t {
+        content_by_lua_block {
+            local st = test_lib.new(test_cfg)
+            local err = st:set("setttl", "bb--", test_ttl)
+            ngx.say(err)
+            local v, err = st:get("setttl")
+            ngx.say(err)
+            ngx.say(v)
+            ngx.sleep(test_ttl)
+            local v, err = st:get("setttl")
+            ngx.say(err)
+            ngx.say(v)
+        }
+    }
+--- request
+    GET /t
+--- response_body_like eval
+"nil
+nil
+bb--
+nil
+nil
+"
+--- no_error_log
+[error]
+
+=== TEST 6: File add ttl
+--- http_config eval: $::HttpConfig
+--- config
+    location =/t {
+        content_by_lua_block {
+            local st = test_lib.new(test_cfg)
+            local err = st:add("addttl", "bb--", test_ttl)
+            ngx.say(err)
+            local v, err = st:get("addttl")
+            ngx.say(err)
+            ngx.say(v)
+            ngx.sleep(test_ttl)
+            local v, err = st:get("addttl")
+            ngx.say(err)
+            ngx.say(v)
+        }
+    }
+--- request
+    GET /t
+--- response_body_like eval
+"nil
+nil
+bb--
+nil
+nil
+"
+--- no_error_log
+[error]
+
+=== TEST 7: File add only set when key not exist
+--- http_config eval: $::HttpConfig
+--- config
+    location =/t {
+        content_by_lua_block {
+            local st = test_lib.new(test_cfg)
+            local err = st:set("prefix1", "bb--", test_ttl)
+            ngx.say(err)
             local err = st:add("prefix1", "aa--")
             ngx.say(err)
             local v, err = st:get("prefix1")
             ngx.say(err)
             ngx.say(v)
+            ngx.sleep(test_ttl)
+            local err = st:add("prefix1", "aa--", test_ttl)
+            ngx.say(err)
+            local v, err = st:get("prefix1")
+            ngx.say(err)
+            ngx.say(v)
+            ngx.sleep(test_ttl)
+            local err = st:add("prefix1", "aa--", test_ttl)
+            ngx.say(err)
         }
     }
 --- request
@@ -175,6 +224,10 @@ nil
 exists
 nil
 bb--
+nil
+nil
+aa--
+nil
 "
 --- no_error_log
 [error]
