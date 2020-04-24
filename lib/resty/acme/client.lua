@@ -99,11 +99,10 @@ function _M:init()
 
   local resp, err = httpc:request_uri(self.conf.api_uri .. "/directory")
   if err then
-    return err
+    return "acme directory request failed: " .. err
   end
 
-  if
-    resp and resp.status == 200 and resp.headers["content-type"] and
+  if resp and resp.status == 200 and resp.headers["content-type"] and
       resp.headers["content-type"]:match("application/json")
    then
     local directory = json.decode(resp.body)
@@ -111,13 +110,21 @@ function _M:init()
       return "acme directory listing response malformed"
     end
     self.directory = directory
+  else
+    local status = resp and resp.status
+    local content_type = resp and resp.headers and resp.headers["content-type"]
+    return string.format("acme directory listing failed: status code %s, content-type %s",
+            status, content_type)
   end
 
+  if not self.directory["newNonce"] or
+      not self.directory["newAccount"] or
+      not self.directory["newOrder"] or
+      not self.directory["revokeCert"] then
+    return "acme directory endpoint is missing at least one of "..
+            "newNonce, newAccount, newOrder or revokeCert endpoint"
+  end
 
-  assert(self.directory["newNonce"])
-  assert(self.directory["newAccount"])
-  assert(self.directory["newOrder"])
-  assert(self.directory["revokeCert"])
   return nil
 end
 
