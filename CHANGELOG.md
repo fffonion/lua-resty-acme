@@ -2,6 +2,13 @@
 ## [Unreleased]
 
 
+<a name="0.5.1"></a>
+## [0.5.1] - 2020-04-25
+### fix
+- ***:** fix domain key sanity check and http-01 challenge matching [687de21](https://github.com/fffonion/lua-resty-openssl/commit/687de2134335278697220cf67ef0b26c4be34e07)
+- **client:** better error handling on directory request [984bfad](https://github.com/fffonion/lua-resty-openssl/commit/984bfad031cef1a6ee3554c8c736ace596ed10d3)
+
+
 <a name="0.5.0"></a>
 ## [0.5.0] - 2020-02-09
 ### feat
@@ -88,7 +95,8 @@
 - ***:** cleanup [2e8f3ed](https://github.com/fffonion/lua-resty-openssl/commit/2e8f3ed8ac95076537272311338c1256e2a31e67)
 
 
-[Unreleased]: https://github.com/fffonion/lua-resty-openssl/compare/0.5.0...HEAD
+[Unreleased]: https://github.com/fffonion/lua-resty-openssl/compare/0.5.1...HEAD
+[0.5.1]: https://github.com/fffonion/lua-resty-openssl/compare/0.5.0...0.5.1
 [0.5.0]: https://github.com/fffonion/lua-resty-openssl/compare/0.4.2...0.5.0
 [0.4.2]: https://github.com/fffonion/lua-resty-openssl/compare/0.4.1...0.4.2
 [0.4.1]: https://github.com/fffonion/lua-resty-openssl/compare/0.4.0...0.4.1
