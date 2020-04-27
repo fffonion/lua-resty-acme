@@ -169,7 +169,7 @@ http {
             -- uncomment folloing to enable RSA + ECC double cert
             -- domain_key_types = { 'rsa', 'ecc' },
             -- uncomment following to enable tls-alpn-01 challenge
-            -- enabled_challenge_handlers = { 'http-01', 'tls-alpn-01' },
+            enabled_challenge_handlers = { 'http-01', 'tls-alpn-01' },
             account_key_path = "/etc/openresty/account.key",
             account_email = "youemail@youdomain.com",
             domain_whitelist = { "example.com" },
@@ -398,6 +398,15 @@ put this as a content_by_* block for `/.well-known` path.
 
 [Back to TOC](#table-of-contents)
 
+### client:serve_tls_alpn_challenge
+
+**syntax**: *client:serve_tls_alpn_challenge()*
+
+Serve [tls-alpn-01](https://letsencrypt.org/docs/challenge-types/) challenge. See
+[this section](https://github.com/fffonion/lua-resty-acme#tls-alpn-01-challenge) on how to use this handler.
+
+[Back to TOC](#table-of-contents)
+
 
 ## Storage Adapters
 
@@ -485,7 +494,6 @@ storage_config = {
 TODO
 ====
 - autossl: ocsp staping
-- openssl: add check for pkey has privkey
 
 [Back to TOC](#table-of-contents)
 
