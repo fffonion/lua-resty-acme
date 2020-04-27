@@ -345,7 +345,7 @@ Default values for `config` are:
 ```lua
 default_config = {
   -- the ACME v2 API endpoint to use
-  api_uri = "https://acme-v02.api.letsencrypt.org",
+  api_uri = "https://acme-v02.api.letsencrypt.org/directory",
   -- the account email to register
   account_email = nil,
   -- the account key in PEM format text

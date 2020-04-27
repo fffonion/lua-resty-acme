@@ -278,7 +278,7 @@ function AUTOSSL.init(autossl_config, acme_config)
 
   acme_config.account_key = AUTOSSL.load_account_key(autossl_config.account_key_path)
   if autossl_config.staging then
-    acme_config.api_uri = "https://acme-staging-v02.api.letsencrypt.org"
+    acme_config.api_uri = "https://acme-staging-v02.api.letsencrypt.org/directory"
   end
   acme_config.account_email = autossl_config.account_email
   acme_config.enabled_challenge_handlers = autossl_config.enabled_challenge_handlers

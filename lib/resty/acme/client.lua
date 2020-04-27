@@ -18,7 +18,7 @@ local mt = {__index = _M}
 
 local default_config = {
   -- the ACME v2 API endpoint to use
-  api_uri = "https://acme-v02.api.letsencrypt.org",
+  api_uri = "https://acme-v02.api.letsencrypt.org/directory",
   -- the account email to register
   account_email = nil,
   -- the account key in PEM format text
@@ -97,7 +97,17 @@ end
 function _M:init()
   local httpc = new_httpc()
 
-  local resp, err = httpc:request_uri(self.conf.api_uri .. "/directory")
+  local url = self.conf.api_uri
+  -- we accept both API endpoint with or without /directory
+  -- to avoid confusion
+  if not ngx.re.match(url, "/directory$") then
+    if not ngx.re.match(url, "/$") then
+      url = url .. "/"
+    end
+    url = url .. "directory"
+  end
+
+  local resp, err = httpc:request_uri(url)
   if err then
     return "acme directory request failed: " .. err
   end
