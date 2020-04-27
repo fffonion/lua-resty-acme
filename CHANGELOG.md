@@ -2,6 +2,12 @@
 ## [Unreleased]
 
 
+<a name="0.5.2"></a>
+## [0.5.2] - 2020-04-27
+### fix
+- ***:** allow API endpoint to include or exclude /directory part [c7feb94](https://github.com/fffonion/lua-resty-openssl/commit/c7feb944db40dc7d8e571cc09594aebffc496bd7)
+
+
 <a name="0.5.1"></a>
 ## [0.5.1] - 2020-04-25
 ### fix
@@ -95,7 +101,8 @@
 - ***:** cleanup [2e8f3ed](https://github.com/fffonion/lua-resty-openssl/commit/2e8f3ed8ac95076537272311338c1256e2a31e67)
 
 
-[Unreleased]: https://github.com/fffonion/lua-resty-openssl/compare/0.5.1...HEAD
+[Unreleased]: https://github.com/fffonion/lua-resty-openssl/compare/0.5.2...HEAD
+[0.5.2]: https://github.com/fffonion/lua-resty-openssl/compare/0.5.1...0.5.2
 [0.5.1]: https://github.com/fffonion/lua-resty-openssl/compare/0.5.0...0.5.1
 [0.5.0]: https://github.com/fffonion/lua-resty-openssl/compare/0.4.2...0.5.0
 [0.4.2]: https://github.com/fffonion/lua-resty-openssl/compare/0.4.1...0.4.2
