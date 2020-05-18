@@ -36,5 +36,5 @@ dependencies = {
    "lua-resty-http >= 0.15-0",
    "lua-resty-lrucache >= 0.09-2",
    "lua-resty-openssl >= 0.5.2",
-   "spacewander/luafilesystem >= 0.1",
+   -- "luafilesystem ~> 1",
 }
