@@ -2,6 +2,12 @@
 ## [Unreleased]
 
 
+<a name="0.5.3"></a>
+## [0.5.3] - 2020-05-18
+### feat
+- **storage:** fully implement the file storage backend ([#6](https://github.com/fffonion/lua-resty-openssl/issues/6)) [f1183e4](https://github.com/fffonion/lua-resty-openssl/commit/f1183e4c4947dad6edd185631358f1d705a2d98e)
+
+
 <a name="0.5.2"></a>
 ## [0.5.2] - 2020-04-27
 ### fix
@@ -101,7 +107,8 @@
 - ***:** cleanup [2e8f3ed](https://github.com/fffonion/lua-resty-openssl/commit/2e8f3ed8ac95076537272311338c1256e2a31e67)
 
 
-[Unreleased]: https://github.com/fffonion/lua-resty-openssl/compare/0.5.2...HEAD
+[Unreleased]: https://github.com/fffonion/lua-resty-openssl/compare/0.5.3...HEAD
+[0.5.3]: https://github.com/fffonion/lua-resty-openssl/compare/0.5.2...0.5.3
 [0.5.2]: https://github.com/fffonion/lua-resty-openssl/compare/0.5.1...0.5.2
 [0.5.1]: https://github.com/fffonion/lua-resty-openssl/compare/0.5.0...0.5.1
 [0.5.0]: https://github.com/fffonion/lua-resty-openssl/compare/0.4.2...0.5.0

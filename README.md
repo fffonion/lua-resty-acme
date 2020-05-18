@@ -508,7 +508,7 @@ TODO
 Credits
 =======
 
-- Improvements of `file` storage by @dbalagansky
+- Improvements of `file` storage by [@dbalagansky](https://github.com/dbalagansky)
 
 
 Copyright and License
