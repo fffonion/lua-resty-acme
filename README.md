@@ -37,7 +37,12 @@ Alternatively, to install using luarocks:
 
 ```shell
 luarocks install lua-resty-acme
+# manually install a luafilesystem
+luarocks install luafilesystem
 ```
+
+Note you will need to manually install `luafilesystem` when using LuaRocks. This is made to maintain
+backward compatibility.
 
 This library uses [an FFI-based openssl backend](https://github.com/fffonion/lua-resty-openssl),
 which currently supports OpenSSL `1.1.1`, `1.1.0` and `1.0.2` series.
@@ -427,6 +432,8 @@ storage_config = {
 ```
 If `dir` is omitted, the OS temporary directory will be used.
 
+`luafilesystem` or `luafilesystem-ffi` is needed when using the `file` storage for renewal.
+
 ### shm
 
 Lua shared dict based storage. Note this storage is volatile between Nginx restarts
@@ -496,6 +503,12 @@ TODO
 - autossl: ocsp staping
 
 [Back to TOC](#table-of-contents)
+
+
+Credits
+=======
+
+- Improvements of `file` storage by @dbalagansky
 
 
 Copyright and License
