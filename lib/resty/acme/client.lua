@@ -96,18 +96,7 @@ end
 
 function _M:init()
   local httpc = new_httpc()
-
-  local url = self.conf.api_uri
-  -- we accept both API endpoint with or without /directory
-  -- to avoid confusion
-  if not ngx.re.match(url, "/directory$") then
-    if not ngx.re.match(url, "/$") then
-      url = url .. "/"
-    end
-    url = url .. "directory"
-  end
-
-  local resp, err = httpc:request_uri(url)
+  local resp, err = httpc:request_uri(self.conf.api_uri)
   if err then
     return "acme directory request failed: " .. err
   end
