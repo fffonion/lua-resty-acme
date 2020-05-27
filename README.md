@@ -142,13 +142,28 @@ prevent potential abuse using fake SNI in SSL handshake.
 domain_whitelist = { "domain1.com", "domain2.com", "domain3.com" },
 ```
 
-To match a pattern in your domain name, for  example all subdomains under `example.com`, use:
+To match a pattern in your domain name, for example all subdomains under `example.com`, use:
 
 ```lua
 domain_whitelist = setmetatable({}, { __index = function(_, k)
     return ngx.re.match(k, [[\.example\.com$]], "jo")
 end}),
 ```
+
+Furthermore, since checking domain whitelist is running in certificate phase.
+It's possible to use cosocket API here. Do note that this will increase the SSL handshake
+latency.
+
+```lua
+domain_whitelist = setmetatable({}, { __index = function(_, k)
+    -- send HTTP request
+    local http = require("resty.http")
+    local res, err = httpc:request_uri("http://example.com")
+    -- access the storage
+    local value, err = require("resty.acme.autossl").storage:get("key")
+end}),
+```
+
 
 ## tls-alpn-01 challenge
 
