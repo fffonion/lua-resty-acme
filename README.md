@@ -491,6 +491,12 @@ storage_config = {
     token = nil,
     -- timeout in ms
     timeout = 2000,
+    -- use HTTPS
+    https = false,
+    -- turn on tls verification
+    tls_verify = true
+    -- SNI used in request, default to host if omitted
+    tls_server_name = nil,
 }
 ```
 

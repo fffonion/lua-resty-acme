@@ -37,9 +37,10 @@ env:
     - NGINX_VERSION=1.15.8 OPENSSL_VER=1.1.1d
 
 before_install:	
-  - docker run -d -e CONSUL_CLIENT_INTERFACE='eth0' -e CONSUL_BIND_INTERFACE='eth0' -p 127.0.0.1:8500:8500 consul agent -server -bootstrap-expect=1	
-  - docker run -d --user root --cap-add=IPC_LOCK -e VAULT_DEV_ROOT_TOKEN_ID=root --name=ctmpl-vault -p 127.0.0.1:8200:8200 vault server -dev
-
+  - docker run -d -e CONSUL_CLIENT_INTERFACE='eth0' -e CONSUL_BIND_INTERFACE='eth0' -p 127.0.0.1:8500:8500 consul agent -server -bootstrap-expect=1
+  - openssl req -x509 -newkey rsa:4096 -keyout /tmp/key.pem -out /tmp/cert.pem -days 1 -nodes -subj '/CN=some.vault'
+  - docker run -d --user root --cap-add=IPC_LOCK -e VAULT_DEV_ROOT_TOKEN_ID=root --name=ctmpl-vault -e 'VAULT_LOCAL_CONFIG={"listener":{"tcp":{"tls_key_file":"/tmp/key.pem","tls_cert_file":"/tmp/cert.pem","address":"0.0.0.0:8210"}}}' -v /tmp/key.pem:/tmp/key.pem -v /tmp/cert.pem:/tmp/cert.pem -p 127.0.0.1:8200:8200 -p 127.0.0.1:8210:8210 vault server -dev
+  - docker logs ctmpl-vault
 install:
   - export NGX_BUILD_CC=$CC
   - export PATH=$PWD/cache/work/nginx/sbin:$PWD/nginx-devel-utils:$PATH

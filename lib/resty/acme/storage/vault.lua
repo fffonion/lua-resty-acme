@@ -6,9 +6,6 @@ local mt = {__index = _M}
 
 function _M.new(conf)
   conf = conf or {}
-  local base_url = conf.https and "https://" or "http://"
-  base_url = base_url .. (conf.host or "127.0.0.1")
-  base_url = base_url .. ":" .. (conf.port or "8200")
 
   local prefix = conf.kv_path
   if not prefix then
@@ -16,21 +13,38 @@ function _M.new(conf)
   elseif prefix:sub(1, 1) ~= "/" then
     prefix = "/" .. prefix
   end
-  local metadata_url = base_url .. "/v1/secret/metadata" .. prefix .. "/"
-  local data_url = base_url .. "/v1/secret/data" .. prefix .. "/"
+  local metadata_url = "/v1/secret/metadata" .. prefix .. "/"
+  local data_url = "/v1/secret/data" .. prefix .. "/"
+
+  local tls_verify = conf.tls_verify
+  if tls_verify == nil then
+    tls_verify = true
+  end
 
   local self =
     setmetatable(
     {
+      host = conf.host or "127.0.0.1",
+      port = conf.port or 8200,
+      https = conf.https,
+      tls_verify = tls_verify,
+      tls_server_name = conf.tls_server_name,
       timeout = conf.timeout or 2000,
       data_url = data_url,
       metadata_url = metadata_url,
     },
     mt
   )
+
   self.headers = {
     ["X-Vault-Token"] = conf.token,
   }
+  if self.https then
+    if not self.tls_server_name then
+      self.tls_server_name = self.host
+    end
+    self.headers["Host"] = self.tls_server_name
+  end
   return self, nil
 end
 
@@ -42,7 +56,18 @@ local function api(self, method, uri, payload)
 
   local payload = payload and cjson.encode(payload)
 
-  local res, err = client:request_uri(uri, {
+  ok, err = client:connect(self.host, self.port)
+  if err then
+    return nil, err
+  end
+  if self.https then
+    local _, err = client:ssl_handshake(nil, self.tls_server_name, self.tls_verify)
+    if err then
+      return nil, "unable to SSL handshake with vault server: " .. err
+    end
+  end
+  local res, err = client:request({
+    path = uri,
     method = method,
     headers = self.headers,
     body = payload,
@@ -50,18 +75,27 @@ local function api(self, method, uri, payload)
   if err then
     return nil, err
   end
-  client:close()
 
   -- return "soft error" for not found and successful delete
   if res.status == 404 or res.status == 204 then
+    client:close()
     return nil, nil
   end
 
-  -- "true" "false" is also valid through cjson
-  local decoded, err = cjson.decode(res.body)
-  if not decoded then
-    return nil, "unable to decode response body " .. (err or 'nil')
+  local body, err = res:read_body()
+  if err then
+    client:close()
+    return nil, "unable to read response body: " .. err
   end
+
+  -- "true" "false" is also valid through cjson
+  local decoded, err = cjson.decode(body)
+  if not decoded then
+    client:close()
+    return nil, "unable to decode response body: " .. (err or 'nil')
+  end
+
+  client:close()
   return decoded, err
 end
 
