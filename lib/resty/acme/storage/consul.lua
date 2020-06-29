@@ -4,6 +4,11 @@ local cjson = require "cjson.safe"
 local _M = {}
 local mt = {__index = _M}
 
+local function valid_consul_key(key)
+  local newstr, _ = ngx.re.gsub(key, [=[[/]]=], "-")
+  return newstr
+end
+
 function _M.new(conf)
   conf = conf or {}
   local base_url = conf.https and "https://" or "http://"
@@ -69,7 +74,7 @@ local function set_cas(self, k, v, cas, ttl)
   if cas then
     table.insert(params, string.format("cas=%d", cas))
   end
-  local uri = k
+  local uri = valid_consul_key(k)
   if #params > 0 then
     uri = uri .. "?" .. table.concat(params, "&")
   end
@@ -99,7 +104,7 @@ function _M:set(k, v, ttl)
 end
 
 function _M:delete(k, cas)
-  local uri = k
+  local uri = valid_consul_key(k)
   if cas then
     uri = uri .. string.format("?cas=%d", cas)
   end
@@ -110,7 +115,7 @@ function _M:delete(k, cas)
 end
 
 function _M:get(k)
-  local res, err = api(self, 'GET', k)
+  local res, err = api(self, 'GET', valid_consul_key(k))
   ngx.update_time()
   if err then
     return nil, err

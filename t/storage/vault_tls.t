@@ -27,6 +27,7 @@ __DATA__
                 port = 8210,
                 https = true,
                 tls_verify = true,
+                kv_path = "secret/acme",
             })
             local err = st:set("keyssl1", "2")
             ngx.say(err)
@@ -34,6 +35,7 @@ __DATA__
                 token = "root",
                 port = 8210,
                 https = true,
+                kv_path = "secret/acme",
             })
             local v, err = st:get("keyssl1")
             ngx.say(err)
@@ -60,6 +62,7 @@ self signed certificate
                 port = 8210,
                 https = true,
                 tls_verify = false,
+                kv_path = "secret/acme",
             })
             local err = st:set("keyssl1", "2")
             ngx.say(err)
@@ -88,6 +91,7 @@ nil
                 token = "root",
                 port = 8210,
                 https = true,
+                kv_path = "secret/acme",
             })
             local err = st:set("keyssl1", "2")
             ngx.say(err)
@@ -117,6 +121,7 @@ certificate does not match
                 port = 8210,
                 https = true,
                 tls_server_name = "some.vault",
+                kv_path = "secret/acme",
             })
             local err = st:set("keyssl1", "2")
             ngx.say(err)

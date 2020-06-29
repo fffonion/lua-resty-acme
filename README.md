@@ -478,7 +478,9 @@ Redis >= 2.6.0 is required as this storage requires [PEXPIRE](https://redis.io/c
 
 ### vault
 
-Hashicorp [Vault](https://www.vaultproject.io/) based storage. The default config is:
+Hashicorp [Vault](https://www.vaultproject.io/) based storage.
+Only [KV V2](https://www.vaultproject.io/api/secret/kv/kv-v2.html) backend is supported.
+The default config is:
 
 
 ```lua

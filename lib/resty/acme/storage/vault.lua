@@ -4,6 +4,11 @@ local cjson = require "cjson.safe"
 local _M = {}
 local mt = {__index = _M}
 
+local function valid_vault_key(key)
+  local newstr, _ = ngx.re.gsub(key, [=[[/]]=], "-")
+  return newstr
+end
+
 function _M.new(conf)
   conf = conf or {}
 
@@ -13,8 +18,14 @@ function _M.new(conf)
   elseif prefix:sub(1, 1) ~= "/" then
     prefix = "/" .. prefix
   end
-  local metadata_url = "/v1/secret/metadata" .. prefix .. "/"
-  local data_url = "/v1/secret/data" .. prefix .. "/"
+  local mount, err = ngx.re.match(prefix, "(/[^/]+)")
+  if err then
+    return err
+  end
+  mount = mount[0]
+  local path = prefix:sub(#mount+1)
+  local metadata_url = "/v1" .. mount .. "/metadata" .. path .. "/"
+  local data_url = "/v1" .. mount .. "/data" .. path .. "/"
 
   local tls_verify = conf.tls_verify
   if tls_verify == nil then
@@ -92,10 +103,14 @@ local function api(self, method, uri, payload)
   local decoded, err = cjson.decode(body)
   if not decoded then
     client:close()
-    return nil, "unable to decode response body: " .. (err or 'nil')
+    return nil, "unable to decode response body: " .. (err or 'nil') .. "body: " .. (body or 'nil')
   end
 
   client:close()
+  if decoded.errors then
+    return nil, "errors from vault: " .. cjson.encode(decoded.errors)
+  end
+
   return decoded, err
 end
 
@@ -106,7 +121,7 @@ local function set_cas(self, k, v, cas, ttl)
     end
     ttl = 1
     -- first update the metadata
-    local _, err = api(self, "POST", self.metadata_url .. k, {
+    local _, err = api(self, "POST", self.metadata_url .. valid_vault_key(k), {
       delete_version_after = string.format("%dms", ttl * 1000)
     })
     -- vault doesn't seem return any useful info in this api ?
@@ -126,7 +141,7 @@ local function set_cas(self, k, v, cas, ttl)
       cas = cas,
     }
   end
-  local res, err = api(self, "POST", self.data_url .. k, payload)
+  local res, err = api(self, "POST", self.data_url .. valid_vault_key(k), payload)
   if not res or err then
     return err or "set key failed"
   end
@@ -134,7 +149,7 @@ local function set_cas(self, k, v, cas, ttl)
 end
 
 local function get(self, k)
-  local res, err = api(self, 'GET', self.data_url .. k)
+  local res, err = api(self, 'GET', self.data_url .. valid_vault_key(k))
   if err then
     return nil, err
   elseif not res or not res["data"] or not res["data"]["data"] 
@@ -170,7 +185,7 @@ end
 
 function _M:delete(k, cas)
   -- delete metadata will delete all versions of secret as well
-  local _, err = api(self, "DELETE", self.metadata_url .. k)
+  local _, err = api(self, "DELETE", self.metadata_url .. valid_vault_key(k))
   if err then
     return "delete key failed"
   end
