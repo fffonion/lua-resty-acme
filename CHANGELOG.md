@@ -2,6 +2,12 @@
 ## [Unreleased]
 
 
+<a name="0.5.5"></a>
+## [0.5.5] - 2020-06-29
+### fix
+- **storage:** remove slash in consul and vault key path [5ddf210](https://github.com/fffonion/lua-resty-acme/commit/5ddf21071ce06a7e003a381440ff75df3faff78e)
+
+
 <a name="0.5.4"></a>
 ## [0.5.4] - 2020-06-24
 ### feat
@@ -113,7 +119,8 @@
 - ***:** cleanup [2e8f3ed](https://github.com/fffonion/lua-resty-acme/commit/2e8f3ed8ac95076537272311338c1256e2a31e67)
 
 
-[Unreleased]: https://github.com/fffonion/lua-resty-acme/compare/0.5.4...HEAD
+[Unreleased]: https://github.com/fffonion/lua-resty-acme/compare/0.5.5...HEAD
+[0.5.5]: https://github.com/fffonion/lua-resty-acme/compare/0.5.4...0.5.5
 [0.5.4]: https://github.com/fffonion/lua-resty-acme/compare/0.5.3...0.5.4
 [0.5.3]: https://github.com/fffonion/lua-resty-acme/compare/0.5.2...0.5.3
 [0.5.2]: https://github.com/fffonion/lua-resty-acme/compare/0.5.1...0.5.2
