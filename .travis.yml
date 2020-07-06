@@ -35,6 +35,9 @@ env:
     - NGINX_VERSION=1.15.8 OPENSSL_VER=1.0.2t
     - NGINX_VERSION=1.15.8 OPENSSL_VER=1.1.0l
     - NGINX_VERSION=1.15.8 OPENSSL_VER=1.1.1d
+    - NGINX_VERSION=1.17.8 OPENSSL_VER=1.0.2t
+    - NGINX_VERSION=1.17.8 OPENSSL_VER=1.1.0l
+    - NGINX_VERSION=1.17.8 OPENSSL_VER=1.1.1d
 
 before_install:	
   - docker run -d -e CONSUL_CLIENT_INTERFACE='eth0' -e CONSUL_BIND_INTERFACE='eth0' -p 127.0.0.1:8500:8500 consul agent -server -bootstrap-expect=1
