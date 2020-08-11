@@ -2,6 +2,12 @@
 ## [Unreleased]
 
 
+<a name="0.5.6"></a>
+## [0.5.6] - 2020-08-12
+### fix
+- **tests:** pin lua-nginx-module and lua-resty-core [6266c56](https://github.com/fffonion/lua-resty-acme/commit/6266c5651e54c56442cef2584303781d16f84d3a)
+
+
 <a name="0.5.5"></a>
 ## [0.5.5] - 2020-06-29
 ### fix
@@ -119,7 +125,8 @@
 - ***:** cleanup [2e8f3ed](https://github.com/fffonion/lua-resty-acme/commit/2e8f3ed8ac95076537272311338c1256e2a31e67)
 
 
-[Unreleased]: https://github.com/fffonion/lua-resty-acme/compare/0.5.5...HEAD
+[Unreleased]: https://github.com/fffonion/lua-resty-acme/compare/0.5.6...HEAD
+[0.5.6]: https://github.com/fffonion/lua-resty-acme/compare/0.5.5...0.5.6
 [0.5.5]: https://github.com/fffonion/lua-resty-acme/compare/0.5.4...0.5.5
 [0.5.4]: https://github.com/fffonion/lua-resty-acme/compare/0.5.3...0.5.4
 [0.5.3]: https://github.com/fffonion/lua-resty-acme/compare/0.5.2...0.5.3
