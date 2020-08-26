@@ -60,7 +60,7 @@ install:
   - git clone https://github.com/openresty/lua-resty-lrucache.git ../lua-resty-lrucache
   - git clone https://github.com/openresty/lua-resty-redis.git ../lua-resty-redis
   - git clone -b v0.15 https://github.com/ledgetech/lua-resty-http ../lua-resty-http
-  - git clone -b 0.5.2 https://github.com/fffonion/lua-resty-openssl ../lua-resty-openssl
+  - git clone https://github.com/fffonion/lua-resty-openssl ../lua-resty-openssl
   - git clone -b 0.3.0 https://github.com/spacewander/luafilesystem ../luafilesystem-ffi
   - cp -r ../lua-resty-lrucache/lib/* ../lua-resty-redis/lib/* ../lua-resty-http/lib/* ../lua-resty-openssl/lib/* ../lib/
   - cp ../luafilesystem-ffi/lfs_ffi.lua ../lib/
