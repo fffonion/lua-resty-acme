@@ -2,6 +2,12 @@
 ## [Unreleased]
 
 
+<a name="0.5.7"></a>
+## [0.5.7] - 2020-08-31
+### fix
+- **tls-alpn-01:** support openresty 1.17.8 [8e93d3b](https://github.com/fffonion/lua-resty-acme/commit/8e93d3ba8be84ae4bd688a84d8bb5109765258e5)
+
+
 <a name="0.5.6"></a>
 ## [0.5.6] - 2020-08-12
 ### fix
@@ -125,7 +131,8 @@
 - ***:** cleanup [2e8f3ed](https://github.com/fffonion/lua-resty-acme/commit/2e8f3ed8ac95076537272311338c1256e2a31e67)
 
 
-[Unreleased]: https://github.com/fffonion/lua-resty-acme/compare/0.5.6...HEAD
+[Unreleased]: https://github.com/fffonion/lua-resty-acme/compare/0.5.7...HEAD
+[0.5.7]: https://github.com/fffonion/lua-resty-acme/compare/0.5.6...0.5.7
 [0.5.6]: https://github.com/fffonion/lua-resty-acme/compare/0.5.5...0.5.6
 [0.5.5]: https://github.com/fffonion/lua-resty-acme/compare/0.5.4...0.5.5
 [0.5.4]: https://github.com/fffonion/lua-resty-acme/compare/0.5.3...0.5.4
