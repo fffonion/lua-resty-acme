@@ -167,6 +167,8 @@ end}),
 
 ## tls-alpn-01 challenge
 
+tls-alpn-01 challenge is currently supported on Openresty `1.15.8.x` and `1.17.8.x`.
+
 <details>
   <summary>Click to expand sample config</summary>
 

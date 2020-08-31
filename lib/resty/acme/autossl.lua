@@ -186,6 +186,8 @@ local function update_cert_handler(data)
     return
   end
 
+  log(ngx_INFO, "new ", typ, " cert for ", domain, " is saved")
+
 end
 
 -- locked wrapper for update_cert_handler

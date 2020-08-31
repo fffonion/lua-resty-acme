@@ -41,7 +41,12 @@ ffi.cdef [[
     SSL_CTX         *session_ctx;
     // trimmed
   } ngx_ssl_connection_s;
+]]
 
+local ngx_version = ngx.config.nginx_version
+if ngx_version == 1015008 then
+  -- 1.15.8
+  ffi.cdef [[
   typedef struct {
     void               *data;
     void               *read;
@@ -74,7 +79,55 @@ ffi.cdef [[
     ngx_ssl_connection_s  *ssl;
     // trimmed
   } ngx_connection_s;
+  ]]
+elseif ngx_version == 1017008 then
+  -- 1.17.8
+  ffi.cdef [[
+  typedef struct {
+    ngx_str_t           src_addr;
+    ngx_str_t           dst_addr;
+    in_port_t           src_port;
+    in_port_t           dst_port;
+  } ngx_proxy_protocol_t;
 
+  typedef struct {
+    void               *data;
+    void               *read;
+    void               *write;
+
+    int                 fd;
+
+    ngx_recv_pt         recv;
+    ngx_send_pt         send;
+    ngx_recv_chain_pt   recv_chain;
+    ngx_send_chain_pt   send_chain;
+
+    void               *listening;
+
+    off_t               sent;
+
+    void               *log;
+
+    void               *pool;
+
+    int                 type;
+
+    void                *sockaddr;
+    socklen_t           socklen;
+    ngx_str_t           addr_text;
+
+    // https://github.com/nginx/nginx/commit/be932e81a1531a3ba032febad968fc2006c4fa48
+    ngx_proxy_protocol_t  *proxy_protocol;
+
+    ngx_ssl_connection_s  *ssl;
+    // trimmed
+  } ngx_connection_s;
+]]
+else
+  error("tls-alpn-01 challenge doesn't support Nginx version " .. ngx_version, 2)
+end
+
+ffi.cdef [[
   typedef struct {
       ngx_connection_s                     *connection;
       // trimmed
