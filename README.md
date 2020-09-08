@@ -361,6 +361,16 @@ where entropy is low.
 
 See also [Storage Adapters](#storage-adapters) below.
 
+### autossl.get_certkey
+
+**syntax**: *certkey, err = autossl.get_certkey(domain, type?)*
+
+Return the PEM-encoded certificate and private key for `domain` from storage. Optionally
+accepts a `type` parameter which can be `"rsa"` or `"ecc"`; if omitted, `type` will default
+to `"rsa"`.
+
+[Back to TOC](#table-of-contents)
+
 ## resty.acme.client
 
 ### client.new

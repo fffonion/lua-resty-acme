@@ -442,4 +442,16 @@ function AUTOSSL.load_account_key(filepath)
   end
 end
 
+function AUTOSSL.get_certkey(domain, typ)
+  if type(domain) ~= "string" then
+    error("domain must be a string")
+  end
+
+  return get_certkey({
+    typ = typ or "rsa",
+    domain = domain,
+    raw = true,
+  })
+end
+
 return AUTOSSL
