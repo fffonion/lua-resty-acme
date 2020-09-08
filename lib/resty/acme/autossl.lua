@@ -36,6 +36,8 @@ local default_config = {
   domain_key_types = { 'rsa' },
   -- restrict registering new cert only with domain defined in this table
   domain_whitelist = nil,
+  -- restrict registering new cert only with domain checked by this function
+  domain_whitelist_callback = nil,
   -- the threshold to renew a cert before it expires, in seconds
   renew_threshold = 7 * 86400,
   -- interval to check cert renewal, in seconds
@@ -52,7 +54,7 @@ local default_config = {
 local domain_pkeys = {}
 
 local domain_key_types, domain_key_types_count
-local domain_whitelist
+local domain_whitelist, domain_whitelist_callback
 
 --[[
   certs_cache = {
@@ -295,6 +297,15 @@ function AUTOSSL.init(autossl_config, acme_config)
       domain_whitelist[w] = true
     end
   end
+  domain_whitelist_callback = autossl_config.domain_whitelist_callback
+  if domain_whitelist_callback and type(domain_whitelist_callback) ~= "function" then
+    error("domain_whitelist_callback must be a function, got " .. type(domain_whitelist_callback))
+  end
+
+  if not domain_whitelist and not domain_whitelist_callback then
+    ngx.log(ngx.WARN, "neither domain_whitelist or domain_whitelist_callback is defined, this may cause",
+                      "security issues as all SNI will trigger a creation of certificate")
+  end
 
   for _, typ in ipairs(domain_key_types) do
     if autossl_config.domain_key_paths[typ] then
@@ -358,7 +369,10 @@ function AUTOSSL.ssl_certificate()
     log(ngx_INFO, "ignore domain ", domain, ", err: ", err)
     return
   end
-  if domain_whitelist and not domain_whitelist[domain] then
+  if domain_whitelist_callback and not domain_whitelist_callback(domain) then
+    log(ngx_INFO, "domain ", domain, " does not pass whitelist_callback, skipping")
+    return
+  elseif domain_whitelist and not domain_whitelist[domain] then
     log(ngx_INFO, "domain ", domain, " not in whitelist, skipping")
     return
   end

@@ -136,8 +136,11 @@ A certificate will be *queued* to create after Nginx seen request with such SNI,
 take tens of seconds to finish. During the meantime, requests with such SNI are responsed
 with the fallback certificate.
 
-Note that `domain_whitelist` must be set to include your domain that you wish to server autossl, to
-prevent potential abuse using fake SNI in SSL handshake.
+Note that `domain_whitelist` or `domain_whitelist_callback` must be set to include your domain
+that you wish to server autossl, to prevent potential abuse using fake SNI in SSL handshake.
+`domain_whitelist` defines a table that includes all domains should be included, and
+`domain_whitelist_callback` defines a function that accepts domain as parameter and return
+boolean to indicate if it should be included.
 ```lua
 domain_whitelist = { "domain1.com", "domain2.com", "domain3.com" },
 ```
@@ -145,9 +148,9 @@ domain_whitelist = { "domain1.com", "domain2.com", "domain3.com" },
 To match a pattern in your domain name, for example all subdomains under `example.com`, use:
 
 ```lua
-domain_whitelist = setmetatable({}, { __index = function(_, k)
-    return ngx.re.match(k, [[\.example\.com$]], "jo")
-end}),
+domain_whitelist_callback = function(domain)
+    return ngx.re.match(domain, [[\.example\.com$]], "jo")
+end
 ```
 
 Furthermore, since checking domain whitelist is running in certificate phase.
@@ -155,12 +158,14 @@ It's possible to use cosocket API here. Do note that this will increase the SSL 
 latency.
 
 ```lua
-domain_whitelist = setmetatable({}, { __index = function(_, k)
+domain_whitelist_callback = function(domain)
     -- send HTTP request
     local http = require("resty.http")
     local res, err = httpc:request_uri("http://example.com")
     -- access the storage
     local value, err = require("resty.acme.autossl").storage:get("key")
+    -- do something to check the domain
+    -- return is_domain_included
 end}),
 ```
 
@@ -330,6 +335,8 @@ default_config = {
   domain_key_types = { 'rsa' },
   -- restrict registering new cert only with domain defined in this table
   domain_whitelist = nil,
+  -- restrict registering new cert only with domain checked by this function
+  domain_whitelist_callback = nil,
   -- the threshold to renew a cert before it expires, in seconds
   renew_threshold = 7 * 86400,
   -- interval to check cert renewal, in seconds
