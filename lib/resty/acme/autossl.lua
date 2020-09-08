@@ -260,9 +260,9 @@ function AUTOSSL.check_renew()
 
       if err then
         log(ngx_ERR, "failed to renew certificate for domain ", domain)
+      else
+        log(ngx_INFO, "successfully renewed ", deserialized.type, " cert for domain ", domain)
       end
-
-      log(ngx_INFO, "successfully renewed ", deserialized.type, " cert for domain ", domain)
     end
 
 ::continue::
