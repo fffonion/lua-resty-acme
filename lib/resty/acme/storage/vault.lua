@@ -118,8 +118,8 @@ local function set_cas(self, k, v, cas, ttl)
   if ttl then
     if ttl > 0 and ttl < 1 then
       ngx.log(ngx.WARN, "vault doesn't support ttl less than 1s, will use 1s")
+      ttl = 1
     end
-    ttl = 1
     -- first update the metadata
     local _, err = api(self, "POST", self.metadata_url .. valid_vault_key(k), {
       delete_version_after = string.format("%dms", ttl * 1000)
