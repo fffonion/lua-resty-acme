@@ -365,6 +365,8 @@ end
 function AUTOSSL.ssl_certificate()
   local domain, err = ssl.server_name()
 
+  domain = string.lower(domain)
+
   if err or not domain then
     log(ngx_INFO, "ignore domain ", domain, ", err: ", err)
     return
