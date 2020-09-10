@@ -2,6 +2,17 @@
 ## [Unreleased]
 
 
+<a name="0.5.8"></a>
+## [0.5.8] - 2020-09-10
+### feat
+- **autossl:** expose get_certkey function [#10](https://github.com/fffonion/lua-resty-acme/issues/10) [daaaf5f](https://github.com/fffonion/lua-resty-acme/commit/daaaf5fa7cc83166af6df6d60f1219664000b018)
+- **autossl:** add domain_whitelist_callback for dynamic domain matching [#9](https://github.com/fffonion/lua-resty-acme/issues/9) [dfe6991](https://github.com/fffonion/lua-resty-acme/commit/dfe6991445b032fe257162f9f479f04d243c3f2a)
+
+### fix
+- **autossl:** emit renewal success log correctly [63ee6ef](https://github.com/fffonion/lua-resty-acme/commit/63ee6ef7c3540b2d17ee546d5f005dd4df537c6e)
+- **storage:** vault backend uses correct TTL [21c4044](https://github.com/fffonion/lua-resty-acme/commit/21c4044f0bb560c3269c38289975598d3793726b)
+
+
 <a name="0.5.7"></a>
 ## [0.5.7] - 2020-08-31
 ### fix
@@ -131,7 +142,8 @@
 - ***:** cleanup [2e8f3ed](https://github.com/fffonion/lua-resty-acme/commit/2e8f3ed8ac95076537272311338c1256e2a31e67)
 
 
-[Unreleased]: https://github.com/fffonion/lua-resty-acme/compare/0.5.7...HEAD
+[Unreleased]: https://github.com/fffonion/lua-resty-acme/compare/0.5.8...HEAD
+[0.5.8]: https://github.com/fffonion/lua-resty-acme/compare/0.5.7...0.5.8
 [0.5.7]: https://github.com/fffonion/lua-resty-acme/compare/0.5.6...0.5.7
 [0.5.6]: https://github.com/fffonion/lua-resty-acme/compare/0.5.5...0.5.6
 [0.5.5]: https://github.com/fffonion/lua-resty-acme/compare/0.5.4...0.5.5
