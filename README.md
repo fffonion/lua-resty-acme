@@ -214,7 +214,11 @@ http {
     server {
         listen 80;
         listen unix:/tmp/nginx-default.sock ssl;
+        # listen unix:/tmp/nginx-default.sock ssl proxy_protocol;
         server_name example.com;
+
+        # set_real_ip_from unix:;
+        # real_ip_header proxy_protocol;
 
         # fallback certs, make sure to create them before hand
         ssl_certificate /etc/openresty/default.pem;
@@ -265,12 +269,18 @@ stream {
 
             ssl_preread on;
             proxy_pass $backend;
+
+            # proxy_protocol on;
     }
 
     server {
             listen unix:/tmp/nginx-tls-alpn.sock ssl;
+            # listen nix:/tmp/nginx-tls-alpn.sock ssl proxy_protocol;
             ssl_certificate certs/default.pem;
             ssl_certificate_key certs/default.key;
+
+            # requires --with-stream_realip_module
+            # set_real_ip_from unix:;
 
             ssl_certificate_by_lua_block {
                     require("resty.acme.autossl").serve_tls_alpn_challenge()
