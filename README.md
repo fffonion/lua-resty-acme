@@ -77,6 +77,10 @@ http {
 
     lua_shared_dict acme 16m;
 
+    # required to verify Let's Encrypt API
+    lua_ssl_trusted_certificate /etc/ssl/certs/ca-certificates.crt;
+    lua_ssl_verify_depth 2;
+
     init_by_lua_block {
         require("resty.acme.autossl").init({
             -- setting the following to true
@@ -102,10 +106,6 @@ http {
         listen 80;
         listen 443 ssl;
         server_name example.com;
-
-        # required to verify Let's Encrypt API
-        lua_ssl_trusted_certificate /etc/ssl/certs/ca-certificates.crt;
-        lua_ssl_verify_depth 2;
 
         # fallback certs, make sure to create them before hand
         ssl_certificate /etc/openresty/default.pem;
@@ -184,7 +184,10 @@ http {
     resolver 8.8.8.8 ipv6=off;
 
     lua_shared_dict acme 16m;
-    lua_shared_dict autossl_events 128k;
+
+    # required to verify Let's Encrypt API
+    lua_ssl_trusted_certificate /etc/ssl/certs/ca-certificates.crt;
+    lua_ssl_verify_depth 2;
 
     init_by_lua_block {
         require("resty.acme.autossl").init({
@@ -206,10 +209,6 @@ http {
     init_worker_by_lua_block {
         require("resty.acme.autossl").init_worker()
     }
-
-    # required to verify Let's Encrypt API
-    lua_ssl_trusted_certificate /etc/ssl/certs/ca-certificates.crt;
-    lua_ssl_verify_depth 2;
 
     server {
         listen 80;
@@ -237,9 +236,7 @@ http {
 }
 
 stream {
-    lua_shared_dict autossl_events 128k;
     init_worker_by_lua_block {
-
         require("resty.acme.autossl").init({
             -- setting the following to true
             -- implies that you read and accepted https://letsencrypt.org/repository/
