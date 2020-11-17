@@ -103,6 +103,6 @@ __DATA__
 --- request
     GET /t
 --- response_body_like eval
-"commonName.+dns1.com.+id-ecPublicKey.+prime256v1.+301E8208646E73312E636F6D8208646E73322E636F6D8208646E73332E636F6D"
+"commonName.+dns1.com.+id-ecPublicKey.+prime.+301E8208646E73312E636F6D8208646E73322E636F6D8208646E73332E636F6D"
 --- no_error_log
 [error]
