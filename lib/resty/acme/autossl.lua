@@ -70,6 +70,7 @@ local CERTS_CACHE_NEG_TTL = 5
 
 local update_cert_lock_key_prefix = "update_lock:"
 local domain_cache_key_prefix = "domain:"
+local account_private_key_prefix = "account_key"
 
 -- get cert and key cdata with caching
 -- domain, typ, raw
@@ -128,7 +129,7 @@ local function get_certkey(opts)
     certs_cache[typ]:set(domain, cache, CERTS_CACHE_TTL)
   else
     certs_cache[typ]:set(domain, null, CERTS_CACHE_NEG_TTL)
-  end 
+  end
   return cache, err_ret
 end
 
@@ -280,7 +281,11 @@ function AUTOSSL.init(autossl_config, acme_config)
 
   local acme_config = acme_config or {}
 
-  acme_config.account_key = AUTOSSL.load_account_key(autossl_config.account_key_path)
+  if not autossl_config.storage_adapter:find("%.") then
+    autossl_config.storage_adapter = "resty.acme.storage." .. autossl_config.storage_adapter
+  end
+
+  acme_config.account_key = AUTOSSL.load_account_key(autossl_config)
   if autossl_config.staging then
     acme_config.api_uri = "https://acme-staging-v02.api.letsencrypt.org/directory"
   end
@@ -330,10 +335,6 @@ function AUTOSSL.init(autossl_config, acme_config)
 
   if err then
     error(err)
-  end
-
-  if not autossl_config.storage_adapter:find("%.") then
-    autossl_config.storage_adapter = "resty.acme.storage." .. autossl_config.storage_adapter
   end
 
   AUTOSSL.client = client
@@ -423,13 +424,39 @@ function AUTOSSL.ssl_certificate()
   end
 end
 
-function AUTOSSL.load_account_key(filepath)
+function AUTOSSL.create_account_key()
+  local t = ngx.now()
+  local pkey = util.create_pkey(4096, 'RSA')
+  ngx.update_time()
+  log(ngx_INFO, ngx.now() - t,  "s spent in creating new account key")
+  return pkey
+end
+
+function AUTOSSL.load_account_key(config)
+  local filepath = config.account_key_path
+  local storage_adapter = config.storage_adapter
+
   if not filepath then
-    local t = ngx.now()
-    local pkey = util.create_pkey(4096, 'RSA')
-    ngx.update_time()
-    log(ngx_INFO, ngx.now() - t,  "s spent in creating new account key")
-    return pkey
+    local storagemod = require(storage_adapter)
+    local storage, err = storagemod.new(config.storage_config)
+    if err then
+      error("Failed to load storage: " .. err)
+    end
+
+    local pkey, err = storage:get(account_private_key_prefix)
+    if err then
+      error("Failed to read account key from stoage storage: " .. err)
+    end
+
+    if not pkey then
+      local pkey = AUTOSSL.create_account_key()
+      local err = storage:set(account_private_key_prefix, pkey)
+      if err then
+        error("failed to save account_key: " .. err)
+      end
+      return pkey
+    end
+
   else
     local account_key_f, err = io.open(filepath)
     if err then
