@@ -285,7 +285,12 @@ function AUTOSSL.init(autossl_config, acme_config)
     autossl_config.storage_adapter = "resty.acme.storage." .. autossl_config.storage_adapter
   end
 
-  acme_config.account_key = AUTOSSL.load_account_key(autossl_config.account_key_path)
+  local account_key = AUTOSSL.load_account_key(autossl_config.account_key_path)
+  acme_config.account_key = account_key
+  if not account_key then
+    AUTOSSL.generated_account_key = AUTOSSL.create_account_key()
+  end
+
   if autossl_config.staging then
     acme_config.api_uri = "https://acme-staging-v02.api.letsencrypt.org/directory"
   end
@@ -351,7 +356,7 @@ function AUTOSSL.init_worker()
   end
   AUTOSSL.storage = storage
 
-  if not AUTOSSL.config.account_key_path and ngx.worker.id() == 0 then
+  if not AUTOSSL.config.account_key_path then
     local account_key = AUTOSSL.load_account_key_storage()
     local err = AUTOSSL.client:load_account_key(account_key)
     if err then
@@ -436,7 +441,6 @@ function AUTOSSL.create_account_key()
   local t = ngx.now()
   local pkey = util.create_pkey(4096, 'RSA')
   ngx.update_time()
-  log(ngx_INFO, ngx.now() - t,  "s spent in creating new account key")
   return pkey
 end
 
@@ -445,16 +449,17 @@ function AUTOSSL.load_account_key_storage()
   local pkey, err = storage:get(account_private_key_prefix)
   if err then
     error("Failed to read account key from storage: " .. err)
+    return nil
   end
 
   if not pkey then
-    local pkey = AUTOSSL.create_account_key()
-    local err = storage:set(account_private_key_prefix, pkey)
+    local err = storage:set(account_private_key_prefix, AUTOSSL.generated_account_key)
     if err then
       error("failed to save account_key: " .. err)
     end
-    return pkey
+    return generated_key
   end
+  return pkey
 end
 
 function AUTOSSL.load_account_key(filepath)
