@@ -285,7 +285,7 @@ function AUTOSSL.init(autossl_config, acme_config)
     autossl_config.storage_adapter = "resty.acme.storage." .. autossl_config.storage_adapter
   end
 
-  acme_config.account_key = AUTOSSL.load_account_key(autossl_config)
+  acme_config.account_key = AUTOSSL.load_account_key(autossl_config.account_key_path)
   if autossl_config.staging then
     acme_config.api_uri = "https://acme-staging-v02.api.letsencrypt.org/directory"
   end
@@ -350,6 +350,14 @@ function AUTOSSL.init_worker()
     error(err)
   end
   AUTOSSL.storage = storage
+
+  if not AUTOSSL.config.account_key_path and ngx.worker.id() == 0 then
+    local account_key = AUTOSSL.load_account_key_storage()
+    local err = AUTOSSL.client:load_account_key(account_key)
+    if err then
+      error("failed to set account key: " .. err)
+    end
+  end
 
   ngx.timer.every(AUTOSSL.config.renew_check_interval, AUTOSSL.check_renew)
 end
@@ -432,32 +440,25 @@ function AUTOSSL.create_account_key()
   return pkey
 end
 
-function AUTOSSL.load_account_key(config)
-  local filepath = config.account_key_path
-  local storage_adapter = config.storage_adapter
+function AUTOSSL.load_account_key_storage()
+  local storage = AUTOSSL.storage
+  local pkey, err = storage:get(account_private_key_prefix)
+  if err then
+    error("Failed to read account key from storage: " .. err)
+  end
 
-  if not filepath then
-    local storagemod = require(storage_adapter)
-    local storage, err = storagemod.new(config.storage_config)
+  if not pkey then
+    local pkey = AUTOSSL.create_account_key()
+    local err = storage:set(account_private_key_prefix, pkey)
     if err then
-      error("Failed to load storage: " .. err)
+      error("failed to save account_key: " .. err)
     end
+    return pkey
+  end
+end
 
-    local pkey, err = storage:get(account_private_key_prefix)
-    if err then
-      error("Failed to read account key from storage: " .. err)
-    end
-
-    if not pkey then
-      local pkey = AUTOSSL.create_account_key()
-      local err = storage:set(account_private_key_prefix, pkey)
-      if err then
-        error("failed to save account_key: " .. err)
-      end
-      return pkey
-    end
-
-  else
+function AUTOSSL.load_account_key(filepath)
+  if filepath then
     local account_key_f, err = io.open(filepath)
     if err then
       error("can't open account_key file " .. filepath .. ": " .. err)
@@ -469,6 +470,7 @@ function AUTOSSL.load_account_key(config)
     account_key_f:close()
     return account_key_pem
   end
+  return nil
 end
 
 function AUTOSSL.get_certkey(domain, typ)

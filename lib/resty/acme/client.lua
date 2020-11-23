@@ -47,15 +47,11 @@ end
 function _M.new(conf)
   conf = setmetatable(conf or {}, {__index = default_config})
 
-  if not conf.account_key then
-    return nil, "account_key is not defined"
-  end
-
   local self = setmetatable(
     {
       directory = nil,
       conf = conf,
-      account_pkey = openssl.pkey.new(conf.account_key),
+      account_pkey = nil,
       account_kid = conf.account_kid,
       nonce = nil,
       challenge_handlers = {}
@@ -84,14 +80,28 @@ function _M.new(conf)
     self.challenge_handlers[c] = handler.new(self.storage)
   end
 
-  local account_thumbprint, err = util.thumbprint(self.account_pkey)
-  if err then
-    return nil, "failed to calculate thumbprint: " .. err
+  if conf.account_key then
+    local account_pkey = openssl.pkey.new(conf.account_key)
+    self.account_pkey = account_pkey
+    local account_thumbprint, err = util.thumbprint(account_pkey)
+    if err then
+      return nil, "failed to calculate thumbprint: " .. err
+    end
+    self.account_thumbprint = account_thumbprint
   end
 
-  self.account_thumbprint = account_thumbprint
-
   return self
+end
+
+function _M:load_account_key(account_key)
+  local account_pkey = openssl.pkey.new(account_key)
+  self.account_pkey = account_pkey
+  local account_thumbprint, err = util.thumbprint(account_pkey)
+  if err then
+    return "failed to calculate thumbprint: " .. err
+  end
+  self.account_thumbprint = account_thumbprint
+  return nil
 end
 
 function _M:init()
