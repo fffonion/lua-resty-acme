@@ -445,7 +445,7 @@ function AUTOSSL.load_account_key(config)
 
     local pkey, err = storage:get(account_private_key_prefix)
     if err then
-      error("Failed to read account key from stoage storage: " .. err)
+      error("Failed to read account key from storage: " .. err)
     end
 
     if not pkey then
