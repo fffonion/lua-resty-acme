@@ -456,6 +456,7 @@ function AUTOSSL.load_account_key_storage()
     local err = storage:set(account_private_key_prefix, AUTOSSL.generated_account_key)
     if err then
       error("failed to save account_key: " .. err)
+      return nil
     end
     return generated_key
   end
