@@ -441,6 +441,7 @@ function AUTOSSL.create_account_key()
   local t = ngx.now()
   local pkey = util.create_pkey(4096, 'RSA')
   ngx.update_time()
+  log(ngx_INFO, ngx.now() - t,  "s spent in creating new account key")
   return pkey
 end
 
