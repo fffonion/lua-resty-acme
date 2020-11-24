@@ -70,7 +70,7 @@ local CERTS_CACHE_NEG_TTL = 5
 
 local update_cert_lock_key_prefix = "update_lock:"
 local domain_cache_key_prefix = "domain:"
-local account_private_key_prefix = "account_key"
+local account_private_key_prefix = "account_key:"
 
 -- get cert and key cdata with caching
 -- domain, typ, raw
