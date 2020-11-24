@@ -44,6 +44,16 @@ local function new_httpc()
   return httpc
 end
 
+local function set_account_key(self, account_key)
+  local account_pkey = openssl.pkey.new(account_key)
+  self.account_pkey = account_pkey
+  local account_thumbprint, err = util.thumbprint(account_pkey)
+  if err then
+    return "failed to calculate thumbprint: " .. err
+  end
+  self.account_thumbprint = account_thumbprint
+end
+
 function _M.new(conf)
   conf = setmetatable(conf or {}, {__index = default_config})
 
@@ -81,28 +91,16 @@ function _M.new(conf)
   end
 
   if conf.account_key then
-    local account_pkey = openssl.pkey.new(conf.account_key)
-    self.account_pkey = account_pkey
-    local account_thumbprint, err = util.thumbprint(account_pkey)
+    local err = set_account_key(self, conf.account_key)
     if err then
-      return nil, "failed to calculate thumbprint: " .. err
+      return nil, err
     end
-    self.account_thumbprint = account_thumbprint
   end
 
   return self
 end
 
-function _M:load_account_key(account_key)
-  local account_pkey = openssl.pkey.new(account_key)
-  self.account_pkey = account_pkey
-  local account_thumbprint, err = util.thumbprint(account_pkey)
-  if err then
-    return "failed to calculate thumbprint: " .. err
-  end
-  self.account_thumbprint = account_thumbprint
-  return nil
-end
+_M.set_account_key = set_account_key
 
 function _M:init()
   local httpc = new_httpc()

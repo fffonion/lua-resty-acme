@@ -358,7 +358,7 @@ function AUTOSSL.init_worker()
 
   if not AUTOSSL.config.account_key_path then
     local account_key = AUTOSSL.load_account_key_storage()
-    local err = AUTOSSL.client:load_account_key(account_key)
+    local err = AUTOSSL.client:set_account_key(AUTOSSL.client, account_key)
     if err then
       error("failed to set account key: " .. err)
     end
