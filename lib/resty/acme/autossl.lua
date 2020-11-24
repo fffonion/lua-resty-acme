@@ -465,19 +465,16 @@ function AUTOSSL.load_account_key_storage()
 end
 
 function AUTOSSL.load_account_key(filepath)
-  if filepath then
-    local account_key_f, err = io.open(filepath)
-    if err then
-      error("can't open account_key file " .. filepath .. ": " .. err)
-    end
-    local account_key_pem, err = account_key_f:read("*a")
-    if err then
-      error("can't read account_key file " .. filepath .. ": " .. err)
-    end
-    account_key_f:close()
-    return account_key_pem
+  local account_key_f, err = io.open(filepath)
+  if err then
+    error("can't open account_key file " .. filepath .. ": " .. err)
   end
-  return nil
+  local account_key_pem, err = account_key_f:read("*a")
+  if err then
+    error("can't read account_key file " .. filepath .. ": " .. err)
+  end
+  account_key_f:close()
+  return account_key_pem
 end
 
 function AUTOSSL.get_certkey(domain, typ)
