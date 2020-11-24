@@ -459,7 +459,7 @@ function AUTOSSL.load_account_key_storage()
       error("failed to save account_key: " .. err)
       return nil
     end
-    return generated_key
+    return AUTOSSL.generated_account_key
   end
   return pkey
 end
