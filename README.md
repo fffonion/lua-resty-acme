@@ -368,6 +368,18 @@ where entropy is low.
 
 See also [Storage Adapters](#storage-adapters) below.
 
+To use a CA provider other than Let's Encrypt, pass `api_uri` in a table as second parameter:
+
+```lua
+resty.acme.autossl.init({
+    tos_accepted = true,
+    account_email = "example@example.com",
+  }, {
+    api_uri = "https://acme.otherca.com/directory",
+  }
+)
+```
+
 ### autossl.get_certkey
 
 **syntax**: *certkey, err = autossl.get_certkey(domain, type?)*
@@ -398,8 +410,12 @@ default_config = {
   account_key = nil,
   -- the account kid (as an URL)
   account_kid = nil,
-  -- storage for challenge and IPC (TODO)
-  storage_adapter = "shm",
+  -- external account binding key id
+  eab_kid = nil,
+  -- external account binding hmac key, base64url encoded
+  eab_hmac_key = nil,
+  -- external account registering handler
+  eab_handler = nil,
   -- the storage config passed to storage adapter
   storage_config = {
     shm_name = "acme"
@@ -412,6 +428,28 @@ default_config = {
 If `account_kid` is omitted, user must call `client:new_account()` to register a
 new account. Note that when using the same `account_key`, `client:new_account()`
 will return the same `kid` that is previosuly registered.
+
+If CA requires [External Account Binding](#external-account-binding), user can set
+`eab_kid` and `eab_hmac_key` to load an existing account, or set `account_email` and
+`eab_handler` to register a new account. `eab_hmac_key` must be base64 url encoded.
+In later case, user must call `client:new_account()` to register a new account.
+`eab_handler` must be an function that accepts account_email as parameter and
+returns `eab_kid`, `eab_hmac_key` and error if any.
+
+```lua
+eab_handler = function(account_email)
+  -- do something to register an account with account_email
+  -- if err then
+  --  return nil, nil, err
+  -- end
+  return eab_kid, eab_hmac_key
+end
+```
+
+The following CA provider's EAB handler is supported by lua-resty-acme and user doesn't
+need to implement their own `eab_handler`:
+
+- [ZeroSSL](https://zerossl.com/)
 
 See also [Storage Adapters](#storage-adapters) below.
 

@@ -13,6 +13,7 @@ local encode_base64url = base64.encode_base64url
 --   encode_base64url = function (s)
 --     return ngx.encode_base64(s):gsub("/", "_"):gsub("+", "-"):gsub("[= ]", "")
 --   end
+local decode_base64url = base64.decode_base64url
 
 -- https://tools.ietf.org/html/rfc7638
 local function thumbprint(pkey)
@@ -43,7 +44,9 @@ local function create_csr(domain_pkey, ...)
   end
 
   local alt, ok, err
-  if #{...} > 1 then
+  -- add subject name to altname as well, some implementaions
+  -- like ZeroSSL requires that
+  if #{...} > 0 then
     alt, err = openssl.altname.new()
     if err then
       return nil, err
@@ -96,6 +99,7 @@ end
 
 return {
     encode_base64url = encode_base64url,
+    decode_base64url = decode_base64url,
     thumbprint = thumbprint,
     create_csr = create_csr,
     create_pkey = create_pkey,

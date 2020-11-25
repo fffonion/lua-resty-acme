@@ -1,15 +1,24 @@
 local http = require("resty.http")
-local json = require("cjson")
+local cjson = require("cjson")
 local util = require("resty.acme.util")
 local openssl = require("resty.acme.openssl")
 
 local encode_base64url = util.encode_base64url
+local decode_base64url = util.decode_base64url
 
 local log = ngx.log
 local ngx_ERR = ngx.ERR
 local ngx_INFO = ngx.INFO
 local ngx_DEBUG = ngx.DEBUG
 local ngx_WARN = ngx.DEBUG
+
+local json = cjson.new()
+-- some implemntations like ZeroSSL doesn't like / to be escaped
+if json.encode_escape_forward_slash then
+  json.encode_escape_forward_slash(false)
+end
+
+local wait_backoff_series = {1, 1, 2, 3, 5, 8, 13, 21}
 
 local _M = {
   _VERSION = '0.5.8'
@@ -25,7 +34,13 @@ local default_config = {
   account_key = nil,
   -- the account kid (as an URL)
   account_kid = nil,
-  -- storage for challenge and IPC (TODO)
+  -- external account binding key id
+  eab_kid = nil,
+  -- external account binding hmac key, base64url encoded
+  eab_hmac_key = nil,
+  -- external account registering handler
+  eab_handler = nil,
+  -- storage for challenge
   storage_adapter = "shm",
   -- the storage config passed to storage adapter
   storage_config = {
@@ -58,6 +73,10 @@ function _M.new(conf)
       account_pkey = openssl.pkey.new(conf.account_key),
       account_kid = conf.account_kid,
       nonce = nil,
+      eab_required = false, -- CA requires external account binding or not
+      eab_handler = conf.eab_handler,
+      eab_kid = conf.eab_kid,
+      eab_hmac_key = decode_base64url(conf.eab_hmac_key),
       challenge_handlers = {}
     }, mt
   )
@@ -135,6 +154,32 @@ function _M:init()
             "newNonce, newAccount, newOrder or revokeCert endpoint"
   end
 
+  if self.directory['meta'] and
+      self.directory['meta']['externalAccountRequired'] then
+
+    self.eab_required = true
+
+    if not self.eab_handler and
+      (not self.eab_kid or not self.eab_hmac_key) then
+
+      -- try to load a predefined eab handler
+      local website = self.directory['meta'] and self.directory['meta']['website']
+      if website then
+        -- load the module based on website metadata
+        website = ngx.re.sub(website, [=[^https?://([^/]+).*$]=], "$1"):gsub("%.", "-")
+        local pok, eab_handler_module = pcall(require, "resty.acme.eab." .. website)
+        if pok and eab_handler_module and eab_handler_module.handle then
+          log(ngx_INFO, "loaded EAB module ", "resty.acme.eab." .. website)
+          self.eab_handler = eab_handler_module.handle
+          return
+        end
+      end
+
+      return "CA requires external account binding, either define a eab_handler to automatically "..
+            "register account, or define eab_kid and eab_hmac_key for existing account"
+    end
+  end
+
   return nil
 end
 
@@ -177,6 +222,27 @@ function _M:jws(url, payload)
       kty = "RSA",
       n = encode_base64url(params.n:to_binary())
     }
+
+    if self.eab_required then
+      local eab_jws = {
+        protected = {
+          alg = "HS256",
+          kid = self.eab_kid,
+          url = url
+        },
+        payload = jws.protected.jwk,
+      }
+
+      log(ngx_DEBUG, "eab jws payload: ", json.encode(eab_jws))
+
+      eab_jws.protected = encode_base64url(json.encode(eab_jws.protected))
+      eab_jws.payload = encode_base64url(json.encode(eab_jws.payload))
+      local hmac = openssl.hmac.new(self.eab_hmac_key, "SHA256")
+      local sig = hmac:final(eab_jws.protected .. "." .. eab_jws.payload)
+      eab_jws.signature = encode_base64url(sig)
+
+      payload['externalAccountBinding'] = eab_jws
+    end
   elseif not self.account_kid then
     return nil, "account_kid is not defined, provide via config or create account first"
   else
@@ -249,12 +315,26 @@ function _M:new_account()
     return self.account_kid, nil
   end
 
-  local _, headers, err = self:post(self.directory["newAccount"],
-    {
-      termsOfServiceAgreed = true,
-      contact = {"mailto:" .. self.conf.account_email}
+  local payload = {
+    termsOfServiceAgreed = true,
+  }
+
+  if self.conf.account_email then
+    payload['contact'] = {
+      "mailto:" .. self.conf.account_email,
     }
-  )
+  end
+
+  if self.eab_required then
+    if not self.eab_handler then
+      return nil, "eab_handler undefined while EAB is required by CA"
+    end
+    local eab_kid, eab_hmac_key, err = self.eab_handler(self.conf.account_email)
+    self.eab_kid = eab_kid
+    self.eab_hmac_key = decode_base64url(eab_hmac_key)
+  end
+
+  local _, headers, err = self:post(self.directory["newAccount"], payload)
 
   if err then
     return nil, "failed to create account: " .. err
@@ -310,7 +390,50 @@ function _M:new_order(...)
   return body, headers, nil
 end
 
-function _M:finalize(finalize_url, csr)
+local function watch_order_status(self, order_url, target)
+  local order_status, err, _
+  for _, t in pairs(wait_backoff_series) do
+    ngx.sleep(t)
+    -- POST-as-GET request with empty payload
+    order_status, _, err = self:post(order_url)
+    log(ngx_DEBUG, "check order: ", json.encode(order_status))
+    if order_status then
+      if order_status.status == target then
+        break
+      elseif order_status.status == "invalid" then
+        local errors = {}
+        for _, authz in ipairs(order_status.authorizations) do
+          local authz_status, _, err = self:post(authz)
+          if err then
+            log(ngx_WARN, "error fetching authorization final status:", err)
+          else
+            for _, c in ipairs(authz_status.challenges) do
+              log(ngx_DEBUG, "authorization status: ", json.encode(c))
+              local err_msg = c['type'] .. ": " .. c['status']
+              if c['error'] and c['error']['detail'] then
+                err_msg = err_msg .. ": " .. c['error']['detail']
+              end
+              errors[#errors+1] = err_msg
+            end
+          end
+        end
+        return nil, "challenge invalid: " .. table.concat(errors, "; ")
+      end
+    end
+  end
+
+  if not order_status then
+    return nil, "could not get order status"
+  end
+
+  if order_status.status ~= target then
+    return nil, "failed to wait for order status, got " .. (order_status.status or "nil")
+  end
+
+  return order_status
+end
+
+function _M:finalize(finalize_url, order_url, csr)
   local payload = {
     csr = encode_base64url(csr)
   }
@@ -325,13 +448,19 @@ function _M:finalize(finalize_url, csr)
     return nil, "wrong content type"
   end
 
-  if not resp.certificate then
+  -- Wait until the order is valid: ready to download
+  if not resp.certificate and resp.status and resp.status == "valid" then
     log(ngx_DEBUG, json.encode(resp))
     return nil, "no certificate object returned " .. (resp.detail or "")
   end
 
+  local order_status, err = watch_order_status(self, order_url, "valid")
+  if not order_status or not order_status.certificate then
+    return nil, "error checking finalize: " .. err
+  end
+
   -- POST-as-GET request with empty payload
-  local body, _, err = self:post(resp.certificate)
+  local body, _, err = self:post(order_status.certificate)
   if err then
     return nil, "failed to fetch certificate: " .. err
   end
@@ -351,6 +480,7 @@ function _M:order_certificate(domain_key, ...)
 
   -- setup challenges
   local finalize_url = order_body.finalize
+  local order_url = order_headers["location"]
   local authzs = order_body.authorizations
   local registered_challenges = {}
   local registered_challenge_count = 0
@@ -395,44 +525,11 @@ function _M:order_certificate(domain_key, ...)
   if registered_challenge_count == 0 then
     return nil, "no challenge is registered"
   end
+
   -- Wait until the order is ready
-  local order_status, _
-  for _, t in pairs({1, 1, 2, 3, 5, 8, 13, 21}) do
-    ngx.sleep(t)
-    -- POST-as-GET request with empty payload
-    order_status, _, err = self:post(order_headers["location"])
-    log(ngx_DEBUG, "check challenge: ", json.encode(order_status))
-    if order_status then
-      if order_status.status == "ready" then
-        break
-      elseif order_status.status == "invalid" then
-        local errors = {}
-        for _, authz in ipairs(order_status.authorizations) do
-          local authz_status, _, err = self:post(authz)
-          if err then
-            log(ngx_WARN, "error fetching authorization final status:", err)
-          else
-            for _, c in ipairs(authz_status.challenges) do
-              log(ngx_DEBUG, "authorization status: ", json.encode(c))
-              local err_msg = c['type'] .. ": " .. c['status']
-              if c['error'] and c['error']['detail'] then
-                err_msg = err_msg .. ": " .. c['error']['detail']
-              end
-              errors[#errors+1] = err_msg
-            end
-          end
-        end
-        return nil, "challenge invalid: " .. table.concat(errors, "; ")
-      end
-    end
-  end
-
+  local order_status, err = watch_order_status(self, order_url, "ready")
   if not order_status then
-    return nil, "could not get order status"
-  end
-
-  if order_status.status ~= "ready" then
-    return nil, "failed to wait for order status, got " .. (order_status.status or "nil")
+    return nil, "error checking challenge: " .. err
   end
 
   local domain_pkey, err = openssl.pkey.new(domain_key)
@@ -445,12 +542,12 @@ function _M:order_certificate(domain_key, ...)
     return nil, "failed to create csr: " .. err
   end
 
-  local cert, err = self:finalize(finalize_url, csr)
+  local cert, err = self:finalize(finalize_url, order_url, csr)
   if err then
     return nil, err
   end
 
-  log(ngx_DEBUG, "order is completed: ", order_headers["location"])
+  log(ngx_DEBUG, "order is completed: ", order_url)
 
   for _, token in ipairs(registered_challenges) do
     for _, ch in pairs(self.challenge_handlers) do
