@@ -380,6 +380,8 @@ resty.acme.autossl.init({
 )
 ```
 
+See https://docs.https.dev/list-of-acme-servers for a list of known public ACME servers.
+
 ### autossl.get_certkey
 
 **syntax**: *certkey, err = autossl.get_certkey(domain, type?)*
@@ -424,6 +426,9 @@ default_config = {
   enabled_challenge_handlers = {"http-01"}
 }
 ```
+
+`api_uri` is the ACME directory endpoint. See https://docs.https.dev/list-of-acme-servers
+for a list of known public ACME servers.
 
 If `account_kid` is omitted, user must call `client:new_account()` to register a
 new account. Note that when using the same `account_key`, `client:new_account()`
