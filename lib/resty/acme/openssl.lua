@@ -10,11 +10,12 @@ if ok then
       name = require("resty.openssl.x509.name"),
       altname = require("resty.openssl.x509.altname"),
       csr = require("resty.openssl.x509.csr"),
-      digest = require("resty.openssl.digest")
+      digest = require("resty.openssl.digest"),
+      hmac = require("resty.openssl.hmac"),
     }
 end
 
-ngx.log(ngx.ERR, "resty.openssl doesn't load: ", ret)
+ngx.log(ngx.INFO, "resty.openssl doesn't load: ", ret)
 
 local ok, _ = pcall(require, "openssl.pkey")
 if ok then
@@ -25,7 +26,8 @@ if ok then
     name = require("openssl.x509.name"),
     altname = require("openssl.x509.altname"),
     csr = require("openssl.x509.csr"),
-    digest = require("openssl.digest")
+    digest = require("openssl.digest"),
+    hmac = require("openssl.hmac"),
   }
 
   local bn = require("openssl.bignum")
