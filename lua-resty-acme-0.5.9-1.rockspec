@@ -1,8 +1,8 @@
 package = "lua-resty-acme"
-version = "0.5.8-1"
+version = "0.5.9-1"
 source = {
    url = "git+https://github.com/fffonion/lua-resty-acme.git",
-   tag = "0.5.8"
+   tag = "0.5.9"
 }
 description = {
    summary = "Automatic Let's Encrypt certificate serving and Lua implementation of ACME procotol",
@@ -23,6 +23,7 @@ build = {
       ["resty.acme.challenge.http-01"] = "lib/resty/acme/challenge/http-01.lua",
       ["resty.acme.challenge.tls-alpn-01"] = "lib/resty/acme/challenge/tls-alpn-01.lua",
       ["resty.acme.client"] = "lib/resty/acme/client.lua",
+      ["resty.acme.eab.zerossl-com"] = "lib/resty/acme/eab/zerossl-com.lua",
       ["resty.acme.openssl"] = "lib/resty/acme/openssl.lua",
       ["resty.acme.storage.consul"] = "lib/resty/acme/storage/consul.lua",
       ["resty.acme.storage.file"] = "lib/resty/acme/storage/file.lua",

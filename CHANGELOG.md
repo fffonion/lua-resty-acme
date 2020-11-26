@@ -2,6 +2,16 @@
 ## [Unreleased]
 
 
+<a name="0.5.9"></a>
+## [0.5.9] - 2020-11-26
+### feat
+- ***:** external account binding (EAB) support ([#19](https://github.com/fffonion/lua-resty-acme/issues/19)) [91383ed](https://github.com/fffonion/lua-resty-acme/commit/91383ed114f8a81d09f1b91394c831376e3233bb)
+
+### fix
+- **autossl:** always use lower cased domain [7fb0c83](https://github.com/fffonion/lua-resty-acme/commit/7fb0c83439dd3e7841bbb192ff2b6ed599e06ed2)
+- **tests:** correct asn1parse result in tests [99a8b01](https://github.com/fffonion/lua-resty-acme/commit/99a8b0121a7a75d0c233f9acd17b53f55739fe79)
+
+
 <a name="0.5.8"></a>
 ## [0.5.8] - 2020-09-10
 ### feat
@@ -142,7 +152,8 @@
 - ***:** cleanup [2e8f3ed](https://github.com/fffonion/lua-resty-acme/commit/2e8f3ed8ac95076537272311338c1256e2a31e67)
 
 
-[Unreleased]: https://github.com/fffonion/lua-resty-acme/compare/0.5.8...HEAD
+[Unreleased]: https://github.com/fffonion/lua-resty-acme/compare/0.5.9...HEAD
+[0.5.9]: https://github.com/fffonion/lua-resty-acme/compare/0.5.8...0.5.9
 [0.5.8]: https://github.com/fffonion/lua-resty-acme/compare/0.5.7...0.5.8
 [0.5.7]: https://github.com/fffonion/lua-resty-acme/compare/0.5.6...0.5.7
 [0.5.6]: https://github.com/fffonion/lua-resty-acme/compare/0.5.5...0.5.6
