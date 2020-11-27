@@ -49,9 +49,10 @@ local function set_account_key(self, account_key)
   self.account_pkey = account_pkey
   local account_thumbprint, err = util.thumbprint(account_pkey)
   if err then
-    return "failed to calculate thumbprint: " .. err
+    return false, "failed to calculate thumbprint: " .. err
   end
   self.account_thumbprint = account_thumbprint
+  return true, nil
 end
 
 function _M.new(conf)
@@ -91,7 +92,7 @@ function _M.new(conf)
   end
 
   if conf.account_key then
-    local err = set_account_key(self, conf.account_key)
+    local ok, err = set_account_key(self, conf.account_key)
     if err then
       return nil, err
     end

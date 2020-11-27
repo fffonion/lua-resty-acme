@@ -288,6 +288,8 @@ function AUTOSSL.init(autossl_config, acme_config)
   if autossl_config.account_key_path then
     acme_config.account_key = AUTOSSL.load_account_key(autossl_config.account_key_path)
   else
+    -- We always generate a key here incase there isn't already one in storage
+    -- that way a consistent one can be shared across all workers
     AUTOSSL.generated_account_key = AUTOSSL.create_account_key()
   end
 
@@ -357,8 +359,11 @@ function AUTOSSL.init_worker()
   AUTOSSL.storage = storage
 
   if not AUTOSSL.config.account_key_path then
-    local account_key = AUTOSSL.load_account_key_storage()
-    local err = AUTOSSL.client:set_account_key(AUTOSSL.client, account_key)
+    local account_key, err = AUTOSSL.load_account_key_storage()
+    if err then
+      error(err)
+    end
+    local ok, err = AUTOSSL.client:set_account_key(account_key)
     if err then
       error("failed to set account key: " .. err)
     end
@@ -449,19 +454,17 @@ function AUTOSSL.load_account_key_storage()
   local storage = AUTOSSL.storage
   local pkey, err = storage:get(account_private_key_prefix)
   if err then
-    error("Failed to read account key from storage: " .. err)
-    return nil
+    return nil, "Failed to read account key from storage: " .. err
   end
 
   if not pkey then
     local err = storage:set(account_private_key_prefix, AUTOSSL.generated_account_key)
     if err then
-      error("failed to save account_key: " .. err)
-      return nil
+      return nil, "failed to save account_key: " .. err
     end
-    return AUTOSSL.generated_account_key
+    return AUTOSSL.generated_account_key, nil
   end
-  return pkey
+  return pkey, nil
 end
 
 function AUTOSSL.load_account_key(filepath)
