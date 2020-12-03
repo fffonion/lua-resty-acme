@@ -70,6 +70,7 @@ local CERTS_CACHE_NEG_TTL = 5
 
 local update_cert_lock_key_prefix = "update_lock:"
 local domain_cache_key_prefix = "domain:"
+local account_private_key_prefix = "account_key:"
 
 -- get cert and key cdata with caching
 -- domain, typ, raw
@@ -128,7 +129,7 @@ local function get_certkey(opts)
     certs_cache[typ]:set(domain, cache, CERTS_CACHE_TTL)
   else
     certs_cache[typ]:set(domain, null, CERTS_CACHE_NEG_TTL)
-  end 
+  end
   return cache, err_ret
 end
 
@@ -280,7 +281,18 @@ function AUTOSSL.init(autossl_config, acme_config)
 
   local acme_config = acme_config or {}
 
-  acme_config.account_key = AUTOSSL.load_account_key(autossl_config.account_key_path)
+  if not autossl_config.storage_adapter:find("%.") then
+    autossl_config.storage_adapter = "resty.acme.storage." .. autossl_config.storage_adapter
+  end
+
+  if autossl_config.account_key_path then
+    acme_config.account_key = AUTOSSL.load_account_key(autossl_config.account_key_path)
+  else
+    -- We always generate a key here incase there isn't already one in storage
+    -- that way a consistent one can be shared across all workers
+    AUTOSSL.generated_account_key = AUTOSSL.create_account_key()
+  end
+
   if autossl_config.staging then
     acme_config.api_uri = "https://acme-staging-v02.api.letsencrypt.org/directory"
   end
@@ -332,10 +344,6 @@ function AUTOSSL.init(autossl_config, acme_config)
     error(err)
   end
 
-  if not autossl_config.storage_adapter:find("%.") then
-    autossl_config.storage_adapter = "resty.acme.storage." .. autossl_config.storage_adapter
-  end
-
   AUTOSSL.client = client
   AUTOSSL.client_initialized = false
   AUTOSSL.config = autossl_config
@@ -349,6 +357,17 @@ function AUTOSSL.init_worker()
     error(err)
   end
   AUTOSSL.storage = storage
+
+  if not AUTOSSL.config.account_key_path then
+    local account_key, err = AUTOSSL.load_account_key_storage()
+    if err then
+      error(err)
+    end
+    local ok, err = AUTOSSL.client:set_account_key(account_key)
+    if err then
+      error("failed to set account key: " .. err)
+    end
+  end
 
   ngx.timer.every(AUTOSSL.config.renew_check_interval, AUTOSSL.check_renew)
 end
@@ -423,25 +442,42 @@ function AUTOSSL.ssl_certificate()
   end
 end
 
-function AUTOSSL.load_account_key(filepath)
-  if not filepath then
-    local t = ngx.now()
-    local pkey = util.create_pkey(4096, 'RSA')
-    ngx.update_time()
-    log(ngx_INFO, ngx.now() - t,  "s spent in creating new account key")
-    return pkey
-  else
-    local account_key_f, err = io.open(filepath)
-    if err then
-      error("can't open account_key file " .. filepath .. ": " .. err)
-    end
-    local account_key_pem, err = account_key_f:read("*a")
-    if err then
-      error("can't read account_key file " .. filepath .. ": " .. err)
-    end
-    account_key_f:close()
-    return account_key_pem
+function AUTOSSL.create_account_key()
+  local t = ngx.now()
+  local pkey = util.create_pkey(4096, 'RSA')
+  ngx.update_time()
+  log(ngx_INFO, ngx.now() - t,  "s spent in creating new account key")
+  return pkey
+end
+
+function AUTOSSL.load_account_key_storage()
+  local storage = AUTOSSL.storage
+  local pkey, err = storage:get(account_private_key_prefix)
+  if err then
+    return nil, "Failed to read account key from storage: " .. err
   end
+
+  if not pkey then
+    local err = storage:set(account_private_key_prefix, AUTOSSL.generated_account_key)
+    if err then
+      return nil, "failed to save account_key: " .. err
+    end
+    return AUTOSSL.generated_account_key, nil
+  end
+  return pkey, nil
+end
+
+function AUTOSSL.load_account_key(filepath)
+  local account_key_f, err = io.open(filepath)
+  if err then
+    error("can't open account_key file " .. filepath .. ": " .. err)
+  end
+  local account_key_pem, err = account_key_f:read("*a")
+  if err then
+    error("can't read account_key file " .. filepath .. ": " .. err)
+  end
+  account_key_f:close()
+  return account_key_pem
 end
 
 function AUTOSSL.get_certkey(domain, typ)

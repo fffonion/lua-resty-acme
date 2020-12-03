@@ -59,18 +59,25 @@ local function new_httpc()
   return httpc
 end
 
+local function set_account_key(self, account_key)
+  local account_pkey = openssl.pkey.new(account_key)
+  self.account_pkey = account_pkey
+  local account_thumbprint, err = util.thumbprint(account_pkey)
+  if err then
+    return false, "failed to calculate thumbprint: " .. err
+  end
+  self.account_thumbprint = account_thumbprint
+  return true, nil
+end
+
 function _M.new(conf)
   conf = setmetatable(conf or {}, {__index = default_config})
-
-  if not conf.account_key then
-    return nil, "account_key is not defined"
-  end
 
   local self = setmetatable(
     {
       directory = nil,
       conf = conf,
-      account_pkey = openssl.pkey.new(conf.account_key),
+      account_pkey = nil,
       account_kid = conf.account_kid,
       nonce = nil,
       eab_required = false, -- CA requires external account binding or not
@@ -103,15 +110,17 @@ function _M.new(conf)
     self.challenge_handlers[c] = handler.new(self.storage)
   end
 
-  local account_thumbprint, err = util.thumbprint(self.account_pkey)
-  if err then
-    return nil, "failed to calculate thumbprint: " .. err
+  if conf.account_key then
+    local ok, err = set_account_key(self, conf.account_key)
+    if err then
+      return nil, err
+    end
   end
-
-  self.account_thumbprint = account_thumbprint
 
   return self
 end
+
+_M.set_account_key = set_account_key
 
 function _M:init()
   local httpc = new_httpc()
