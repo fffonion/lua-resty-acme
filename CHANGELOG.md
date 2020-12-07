@@ -2,6 +2,13 @@
 ## [Unreleased]
 
 
+<a name="0.5.10"></a>
+## [0.5.10] - 2020-12-08
+### feat
+- ***:** allow to set account key in client and use account key from storage in autossl [6ec9ef5](https://github.com/fffonion/lua-resty-acme/commit/6ec9ef5bbb54d2afb437dcc423c4f410ae8f15f0)
+- **tls-alpn-01:** mark compatible with 1.19.3 [bec79ec](https://github.com/fffonion/lua-resty-acme/commit/bec79eca8b748f419e8b0f50b3393f6134331b4d)
+
+
 <a name="0.5.9"></a>
 ## [0.5.9] - 2020-11-26
 ### feat
@@ -152,7 +159,8 @@
 - ***:** cleanup [2e8f3ed](https://github.com/fffonion/lua-resty-acme/commit/2e8f3ed8ac95076537272311338c1256e2a31e67)
 
 
-[Unreleased]: https://github.com/fffonion/lua-resty-acme/compare/0.5.9...HEAD
+[Unreleased]: https://github.com/fffonion/lua-resty-acme/compare/0.5.10...HEAD
+[0.5.10]: https://github.com/fffonion/lua-resty-acme/compare/0.5.9...0.5.10
 [0.5.9]: https://github.com/fffonion/lua-resty-acme/compare/0.5.8...0.5.9
 [0.5.8]: https://github.com/fffonion/lua-resty-acme/compare/0.5.7...0.5.8
 [0.5.7]: https://github.com/fffonion/lua-resty-acme/compare/0.5.6...0.5.7
