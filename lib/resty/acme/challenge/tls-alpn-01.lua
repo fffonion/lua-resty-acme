@@ -80,8 +80,8 @@ if ngx_version == 1015008 then
     // trimmed
   } ngx_connection_s;
   ]]
-elseif ngx_version == 1017008 then
-  -- 1.17.8
+elseif ngx_version == 1017008 or ngx_version == 1019003 then
+  -- 1.17.8, 1.19.3
   ffi.cdef [[
   typedef struct {
     ngx_str_t           src_addr;
