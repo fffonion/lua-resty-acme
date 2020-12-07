@@ -1,6 +1,10 @@
 <a name="unreleased"></a>
 ## [Unreleased]
 
+### feat
+- ***:** allow to set account key in client and use account key from storage in autossl
+- **tls-alpn-01:** mark compatible with 1.19.3
+
 
 <a name="0.5.9"></a>
 ## [0.5.9] - 2020-11-26
