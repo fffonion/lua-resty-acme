@@ -88,7 +88,7 @@ http {
             tos_accepted = true,
             -- uncomment following for first time setup
             -- staging = true,
-            -- uncomment folloing to enable RSA + ECC double cert
+            -- uncomment following to enable RSA + ECC double cert
             -- domain_key_types = { 'rsa', 'ecc' },
             -- uncomment following to enable tls-alpn-01 challenge
             -- enabled_challenge_handlers = { 'http-01', 'tls-alpn-01' },
