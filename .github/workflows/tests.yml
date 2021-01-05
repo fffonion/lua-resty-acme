@@ -72,6 +72,8 @@ jobs:
         chmod 777 /tmp/key.pem /tmp/cert.pem
         docker run -d --user root --cap-add=IPC_LOCK -e VAULT_DEV_ROOT_TOKEN_ID=root --name=vault -e 'VAULT_LOCAL_CONFIG={"listener":{"tcp":{"tls_key_file":"/tmp/key.pem","tls_cert_file":"/tmp/cert.pem","address":"0.0.0.0:8210"}}}' -v /tmp/key.pem:/tmp/key.pem -v /tmp/cert.pem:/tmp/cert.pem -p 127.0.0.1:8200:8200 -p 127.0.0.1:8210:8210 vault server -dev
         docker logs vault
+        docker run -d -v /usr/share/ca-certificates/:/etc/ssl/certs -p 4001:4001 -p 2380:2380 -p 2379:2379  --name etcd quay.io/coreos/etcd:v2.3.8  -name etcd0  -advertise-client-urls http://${HostIP}:2379,http://${HostIP}:4001  -listen-client-urls http://0.0.0.0:2379,http://0.0.0.0:4001  -initial-advertise-peer-urls http://${HostIP}:2380  -listen-peer-urls http://0.0.0.0:2380  -initial-cluster-token etcd-cluster-1  -initial-cluster etcd0=http://${HostIP}:2380  -initial-cluster-state new
+        docker logs etcd
 
     - name: Setup tools
       run: |
@@ -97,7 +99,9 @@ jobs:
         git clone https://github.com/fffonion/lua-resty-openssl ../lua-resty-openssl
         git clone -b 0.3.0 https://github.com/spacewander/luafilesystem ../luafilesystem-ffi
         git clone https://github.com/jkeys089/lua-resty-hmac ../lua-resty-hmac && pushd ../lua-resty-hmac && git checkout 79a4929 && popd
-        cp -r ../lua-resty-lrucache/lib/* ../lua-resty-redis/lib/* ../lua-resty-http/lib/* ../lua-resty-openssl/lib/* ../lib/
+        git clone https://github.com/iresty/lua-typeof ../lua-typeof
+        git clone https://github.com/api7/lua-resty-etcd ../lua-resty-etcd
+        cp -r ../lua-resty-lrucache/lib/* ../lua-resty-redis/lib/* ../lua-resty-http/lib/* ../lua-resty-openssl/lib/* ../lua-typeof/lib/* ../lua-resty-etcd/lib/* ../lib/
         cp ../luafilesystem-ffi/lfs_ffi.lua ../lib/
         find ../lib
 
