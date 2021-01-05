@@ -584,6 +584,20 @@ storage_config = {
 }
 ```
 
+### etcd
+
+[etcd](https://etcd.io) based storage. The default config is:
+
+```lua
+storage_config = {
+    http_host = 'http://127.0.0.1:4001',
+    protocol = 'v2',
+    key_prefix = '',
+    ttl = -1,
+    timeout = 60,
+}
+```
+
 
 TODO
 ====
