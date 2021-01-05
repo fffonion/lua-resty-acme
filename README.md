@@ -586,17 +586,21 @@ storage_config = {
 
 ### etcd
 
-[etcd](https://etcd.io) based storage. The default config is:
+[etcd](https://etcd.io) based storage. Right now only `v2` protocol is supported.
+The default config is:
 
 ```lua
 storage_config = {
     http_host = 'http://127.0.0.1:4001',
     protocol = 'v2',
     key_prefix = '',
-    ttl = -1,
     timeout = 60,
+    ssl_verify = false,
 }
 ```
+
+Etcd storage requires [lua-resty-etcd](https://github.com/api7/lua-resty-etcd) library to installed.
+It can be manually installed with `opm install api7/lua-resty-etcd` or `luarocks install lua-resty-etcd`.
 
 
 TODO
