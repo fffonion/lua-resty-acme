@@ -7,6 +7,9 @@
 ### feat
 - **storage:** add etcd storage backend ([#13](https://github.com/fffonion/lua-resty-acme/issues/13)) [841e0c3](https://github.com/fffonion/lua-resty-acme/commit/841e0c3b527c442fdf0a7dc75c71d5cc8088b194)
 
+### fix
+- **storage/etcd:** fix etcd list, add and add tests [7ddc1b4](https://github.com/fffonion/lua-resty-acme/commit/7ddc1b4a5e0c40850fa7f3d62bc460398518a7aa)
+
 
 <a name="0.5.10"></a>
 ## [0.5.10] - 2020-12-08
