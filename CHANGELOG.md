@@ -2,6 +2,12 @@
 ## [Unreleased]
 
 
+<a name="0.5.11"></a>
+## [0.5.11] - 2021-01-05
+### feat
+- **storage:** add etcd storage backend ([#13](https://github.com/fffonion/lua-resty-acme/issues/13)) [841e0c3](https://github.com/fffonion/lua-resty-acme/commit/841e0c3b527c442fdf0a7dc75c71d5cc8088b194)
+
+
 <a name="0.5.10"></a>
 ## [0.5.10] - 2020-12-08
 ### feat
@@ -159,7 +165,8 @@
 - ***:** cleanup [2e8f3ed](https://github.com/fffonion/lua-resty-acme/commit/2e8f3ed8ac95076537272311338c1256e2a31e67)
 
 
-[Unreleased]: https://github.com/fffonion/lua-resty-acme/compare/0.5.10...HEAD
+[Unreleased]: https://github.com/fffonion/lua-resty-acme/compare/0.5.11...HEAD
+[0.5.11]: https://github.com/fffonion/lua-resty-acme/compare/0.5.10...0.5.11
 [0.5.10]: https://github.com/fffonion/lua-resty-acme/compare/0.5.9...0.5.10
 [0.5.9]: https://github.com/fffonion/lua-resty-acme/compare/0.5.8...0.5.9
 [0.5.8]: https://github.com/fffonion/lua-resty-acme/compare/0.5.7...0.5.8

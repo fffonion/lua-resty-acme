@@ -21,7 +21,7 @@ end
 local wait_backoff_series = {1, 1, 2, 3, 5, 8, 13, 21}
 
 local _M = {
-  _VERSION = '0.5.10'
+  _VERSION = '0.5.11'
 }
 local mt = {__index = _M}
 

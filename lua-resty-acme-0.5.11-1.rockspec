@@ -1,8 +1,8 @@
 package = "lua-resty-acme"
-version = "0.5.10-1"
+version = "0.5.11-1"
 source = {
    url = "git+https://github.com/fffonion/lua-resty-acme.git",
-   tag = "0.5.10"
+   tag = "0.5.11"
 }
 description = {
    summary = "Automatic Let's Encrypt certificate serving and Lua implementation of ACME procotol",
@@ -26,6 +26,7 @@ build = {
       ["resty.acme.eab.zerossl-com"] = "lib/resty/acme/eab/zerossl-com.lua",
       ["resty.acme.openssl"] = "lib/resty/acme/openssl.lua",
       ["resty.acme.storage.consul"] = "lib/resty/acme/storage/consul.lua",
+      ["resty.acme.storage.etcd"] = "lib/resty/acme/storage/etcd.lua",
       ["resty.acme.storage.file"] = "lib/resty/acme/storage/file.lua",
       ["resty.acme.storage.redis"] = "lib/resty/acme/storage/redis.lua",
       ["resty.acme.storage.shm"] = "lib/resty/acme/storage/shm.lua",
