@@ -384,12 +384,13 @@ end
 function AUTOSSL.ssl_certificate()
   local domain, err = ssl.server_name()
 
-  domain = string.lower(domain)
-
   if err or not domain then
     log(ngx_INFO, "ignore domain ", domain, ", err: ", err)
     return
   end
+
+  domain = string.lower(domain)
+
   if domain_whitelist_callback and not domain_whitelist_callback(domain) then
     log(ngx_INFO, "domain ", domain, " does not pass whitelist_callback, skipping")
     return
