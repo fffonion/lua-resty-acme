@@ -164,7 +164,7 @@ local function update_cert_handler(data)
     elseif typ == 'ecc' then
       pkey = util.create_pkey(nil, 'EC', 'prime256v1')
     else
-      return nil, nil, "unknown key type: " .. typ
+      return "unknown key type: " .. typ
     end
     ngx.update_time()
     log(ngx_INFO, ngx.now() - t,  "s spent in creating new ", typ, " private key")
@@ -172,7 +172,7 @@ local function update_cert_handler(data)
   local cert, err = AUTOSSL.client:order_certificate(pkey, domain)
   if err then
     log(ngx_ERR, "error updating cert for ", domain, " err: ", err)
-    return
+    return err
   end
 
   local serialized = json.encode({
@@ -186,7 +186,7 @@ local function update_cert_handler(data)
   local err = AUTOSSL.storage:set(domain_cache_key, serialized)
   if err then
     log(ngx_ERR, "error storing cert and key to storage ", err)
-    return
+    return err
   end
 
   log(ngx_INFO, "new ", typ, " cert for ", domain, " is saved")
