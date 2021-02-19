@@ -307,9 +307,9 @@ function _M:post(url, payload, headers)
   log(ngx_DEBUG, "acme request: ", url, " response: ", resp.body)
 
   local body
-  if resp.headers['Content-Type'] == "application/json" then
+  if resp.headers['Content-Type']:sub(1, 16) == "application/json" then
     body = json.decode(resp.body)
-  elseif resp.headers['Content-Type'] == "application/problem+json" then
+  elseif resp.headers['Content-Type']:sub(1, 24) == "application/problem+json" then
     body = json.decode(resp.body)
     return nil, nil, body.detail or body.type
   else
