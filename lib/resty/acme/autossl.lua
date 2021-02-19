@@ -78,7 +78,7 @@ local function get_certkey(opts)
   local typ = opts.type
   local domain = opts.domain
   local data, _ --[[stale]], _ --[[flags]] = certs_cache[typ]:get(domain)
-  if data then
+  if data and not opts.raw then
     return data, nil
   end
 
