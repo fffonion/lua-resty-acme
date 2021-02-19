@@ -73,10 +73,7 @@ local domain_cache_key_prefix = "domain:"
 local account_private_key_prefix = "account_key:"
 
 -- get cert from storage
-local function get_certkey_from_storage(opts)
-  local typ = opts.type
-  local domain = opts.domain
-
+local function get_certkey(domain, typ)
   local domain_key = domain_cache_key_prefix .. typ .. ":" .. domain
   local serialized, err = AUTOSSL.storage:get(domain_key)
   if err then
@@ -95,10 +92,7 @@ local function get_certkey_from_storage(opts)
 end
 
 -- get cert and key cdata with caching
--- domain, typ
-local function get_certkey(opts)
-  local typ = opts.type
-  local domain = opts.domain
+local function get_certkey_parsed(domain, typ)
   local data, _ --[[stale]], _ --[[flags]] = certs_cache[typ]:get(domain)
 
   if data then
@@ -108,7 +102,7 @@ local function get_certkey(opts)
   -- pull from storage
   local cache, err_ret
   while true do
-    local deserialized, err = get_certkey_from_storage(opts)
+    local deserialized, err = get_certkey(domain, typ)
     if err then
       err_ret = "failed to read from storage err: " .. err
       break
@@ -152,7 +146,7 @@ local function update_cert_handler(data)
   local pkey
 
   if data.renew then
-    local certkey, err = get_certkey_from_storage({ domain = domain, type = typ })
+    local certkey, err = get_certkey(domain, typ)
     if err then
       log(ngx_ERR, "failed to read ", typ, " cert for domain: ", err)
     elseif not certkey or certkey == null then
@@ -413,7 +407,7 @@ function AUTOSSL.ssl_certificate()
   local chains_set = {}
 
   for i, typ in ipairs(domain_key_types) do
-    local certkey, err = get_certkey({ domain = domain, type = typ })
+    local certkey, err = get_certkey_parsed(domain, typ)
     if err then
       log(ngx_ERR, "can't read key and cert from storage ", err)
     elseif certkey == null then
@@ -496,10 +490,7 @@ function AUTOSSL.get_certkey(domain, typ)
     error("domain must be a string")
   end
 
-  return get_certkey_from_storage({
-    typ = typ or "rsa",
-    domain = domain,
-  })
+  return get_certkey_from_storage(domain, typ or "rsa")
 end
 
 return AUTOSSL
