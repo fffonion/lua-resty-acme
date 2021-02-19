@@ -2,6 +2,16 @@
 ## [Unreleased]
 
 
+<a name="0.6.0"></a>
+## [0.6.0] - 2021-02-19
+### fix
+- **autossl:** check if domain is set before trying to alter it ([#27](https://github.com/fffonion/lua-resty-acme/issues/27)) [fe36fc9](https://github.com/fffonion/lua-resty-acme/commit/fe36fc992b2d1c834eb8acbb8489f88f814653c4)
+- **autossl:** returns error in update_cert_handler ([#25](https://github.com/fffonion/lua-resty-acme/issues/25)) [a7dff99](https://github.com/fffonion/lua-resty-acme/commit/a7dff99ef5dc30dcecbea534b124231c5b0aa9cf)
+- **client:** BREAKING: do not force /directory at the end of api_url ([#31](https://github.com/fffonion/lua-resty-acme/issues/31)) [e4ea134](https://github.com/fffonion/lua-resty-acme/commit/e4ea134a0214f9df6f73fa8d31621cc96a382a6c)
+- **client:** allow charset Content-Type header of ACME responses ([#30](https://github.com/fffonion/lua-resty-acme/issues/30)) [3a9ade6](https://github.com/fffonion/lua-resty-acme/commit/3a9ade62867d304835fb888f3dfbdc872afc133d)
+- **openssl:** fix version import [6cb94be](https://github.com/fffonion/lua-resty-acme/commit/6cb94beb4b3911e28e55aa0b40ba547357e862e0)
+
+
 <a name="0.5.11"></a>
 ## [0.5.11] - 2021-01-05
 ### feat
@@ -168,7 +178,8 @@
 - ***:** cleanup [2e8f3ed](https://github.com/fffonion/lua-resty-acme/commit/2e8f3ed8ac95076537272311338c1256e2a31e67)
 
 
-[Unreleased]: https://github.com/fffonion/lua-resty-acme/compare/0.5.11...HEAD
+[Unreleased]: https://github.com/fffonion/lua-resty-acme/compare/0.6.0...HEAD
+[0.6.0]: https://github.com/fffonion/lua-resty-acme/compare/0.5.11...0.6.0
 [0.5.11]: https://github.com/fffonion/lua-resty-acme/compare/0.5.10...0.5.11
 [0.5.10]: https://github.com/fffonion/lua-resty-acme/compare/0.5.9...0.5.10
 [0.5.9]: https://github.com/fffonion/lua-resty-acme/compare/0.5.8...0.5.9
