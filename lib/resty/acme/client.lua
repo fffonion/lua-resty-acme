@@ -483,6 +483,7 @@ function _M:order_certificate(domain_key, ...)
   local authzs = order_body.authorizations
   local registered_challenges = {}
   local registered_challenge_count = 0
+  local has_valid_challenge = false
 
   for _, authz in ipairs(authzs) do
     -- POST-as-GET request with empty payload
@@ -497,7 +498,12 @@ function _M:order_certificate(domain_key, ...)
     end
     for _, challenge in ipairs(challenges.challenges) do
       local typ = challenge.type
-      if self.challenge_handlers[typ] then
+      if challenge.status ~= 'pending' then
+        if challenge.status == 'valid' then
+          has_valid_challenge = true
+        end
+        log(ngx_DEBUG, "challenge ", typ, ": ", challenge.token, " is ", challenge.status, ", skipping")
+      elseif self.challenge_handlers[typ] then
         local err = self.challenge_handlers[typ]:register_challenge(
           challenge.token,
           challenge.token .. "." .. self.account_thumbprint,
@@ -521,8 +527,8 @@ function _M:order_certificate(domain_key, ...)
 ::nextchallenge::
   end
 
-  if registered_challenge_count == 0 then
-    return nil, "no challenge is registered"
+  if registered_challenge_count == 0 and not has_valid_challenge then
+    return nil, "no challenge is registered and no challenge is valid"
   end
 
   -- Wait until the order is ready
