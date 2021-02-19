@@ -498,38 +498,36 @@ function _M:order_certificate(domain_key, ...)
     end
     for _, challenge in ipairs(challenges.challenges) do
       local typ = challenge.type
-      if self.challenge_handlers[typ] then
-        if challenge.status == 'pending' then
-          local err = self.challenge_handlers[typ]:register_challenge(
-            challenge.token,
-            challenge.token .. "." .. self.account_thumbprint,
-            {...}
-          )
-          if err then
-            return nil, "error registering challenge: " .. err
-          end
-          registered_challenges[registered_challenge_count + 1] = challenge.token
-          registered_challenge_count = registered_challenge_count + 1
-          log(ngx_DEBUG, "register challenge ", typ, ": ", challenge.token)
-          -- signal server to start challenge check
-          -- needs to be empty json body rather than empty string
-          -- https://tools.ietf.org/html/rfc8555#section-7.5.1
-          local _, _, err = self:post(challenge.url, {})
-          if err then
-            return nil, "error start challenge check: " .. err
-          end
-        else
-          if challenge.status == 'valid' then
-            has_valid_challenge = true
-          end
-          log(ngx_DEBUG, "challenge ", typ, ": ", challenge.token, " is ", challenge.status, ", skipping")
+      if challenge.status ~= 'pending' then
+        if challenge.status == 'valid' then
+          has_valid_challenge = true
+        end
+        log(ngx_DEBUG, "challenge ", typ, ": ", challenge.token, " is ", challenge.status, ", skipping")
+      elseif self.challenge_handlers[typ] then
+        local err = self.challenge_handlers[typ]:register_challenge(
+          challenge.token,
+          challenge.token .. "." .. self.account_thumbprint,
+          {...}
+        )
+        if err then
+          return nil, "error registering challenge: " .. err
+        end
+        registered_challenges[registered_challenge_count + 1] = challenge.token
+        registered_challenge_count = registered_challenge_count + 1
+        log(ngx_DEBUG, "register challenge ", typ, ": ", challenge.token)
+        -- signal server to start challenge check
+        -- needs to be empty json body rather than empty string
+        -- https://tools.ietf.org/html/rfc8555#section-7.5.1
+        local _, _, err = self:post(challenge.url, {})
+        if err then
+          return nil, "error start challenge check: " .. err
         end
       end
     end
 ::nextchallenge::
   end
 
-  if registered_challenge_count == 0 and has_valid_challenge == false then
+  if registered_challenge_count == 0 and not has_valid_challenge then
     return nil, "no challenge is registered and no challenge is valid"
   end
 
