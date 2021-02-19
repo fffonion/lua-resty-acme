@@ -1,18 +1,18 @@
 local ok, ret = pcall(require, "resty.openssl")
 
 if ok then
-    local openssl = ret
-    ngx.log(ngx.INFO, "using ffi, OpenSSL version linked: ", string.format("%x", openssl.version.version_num))
+  local version = require("resty.openssl.version")
+  ngx.log(ngx.INFO, "using ffi, OpenSSL version linked: ", string.format("%x", version.version_num))
 
-    return {
-      pkey = require("resty.openssl.pkey"),
-      x509 = require("resty.openssl.x509"),
-      name = require("resty.openssl.x509.name"),
-      altname = require("resty.openssl.x509.altname"),
-      csr = require("resty.openssl.x509.csr"),
-      digest = require("resty.openssl.digest"),
-      hmac = require("resty.openssl.hmac"),
-    }
+  return {
+    pkey = require("resty.openssl.pkey"),
+    x509 = require("resty.openssl.x509"),
+    name = require("resty.openssl.x509.name"),
+    altname = require("resty.openssl.x509.altname"),
+    csr = require("resty.openssl.x509.csr"),
+    digest = require("resty.openssl.digest"),
+    hmac = require("resty.openssl.hmac"),
+  }
 end
 
 ngx.log(ngx.INFO, "resty.openssl doesn't load: ", ret)
