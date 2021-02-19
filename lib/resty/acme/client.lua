@@ -125,9 +125,7 @@ _M.set_account_key = set_account_key
 function _M:init()
   local httpc = new_httpc()
 
-  local url = self.conf.api_uri
-
-  local resp, err = httpc:request_uri(url)
+  local resp, err = httpc:request_uri(self.conf.api_uri)
   if err then
     return "acme directory request failed: " .. err
   end
