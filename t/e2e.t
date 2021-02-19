@@ -87,8 +87,9 @@ __DATA__
 --- request eval
 "GET /t/$ENV{'SUBDOMAIN'}.$ENV{'FRP_SERVER_HOST'}"
 --- response_body_like eval
-"Fake LE Intermediate X1.+CN\\s*=\\s*$ENV{'SUBDOMAIN'}.$ENV{'FRP_SERVER_HOST'}.+rsaEncryption"
+"\\(STAGING\\) Let's Encrypt.+CN\\s*=\\s*$ENV{'SUBDOMAIN'}.$ENV{'FRP_SERVER_HOST'}.+rsaEncryption"
 --- no_error_log
+[warn]
 [error]
 
 === TEST 2: Serve RSA + ECC dual certs
@@ -143,9 +144,10 @@ __DATA__
 --- request eval
 "GET /t/$ENV{'SUBDOMAIN'}.$ENV{'FRP_SERVER_HOST'}"
 --- response_body_like eval
-"Fake LE Intermediate X1.+CN\\s*=\\s*$ENV{'SUBDOMAIN'}.$ENV{'FRP_SERVER_HOST'}.+rsaEncryption.+Fake LE Intermediate X1.+CN\\s*=\\s*$ENV{'SUBDOMAIN'}.$ENV{'FRP_SERVER_HOST'}.+id-ecPublicKey
+"\\(STAGING\\) Let's Encrypt.+CN\\s*=\\s*$ENV{'SUBDOMAIN'}.$ENV{'FRP_SERVER_HOST'}.+rsaEncryption.+\\(STAGING\\) Let's Encrypt.+CN\\s*=\\s*$ENV{'SUBDOMAIN'}.$ENV{'FRP_SERVER_HOST'}.+id-ecPublicKey
 "
 --- no_error_log
+[warn]
 [error]
 --- error_log
 set ecc key
