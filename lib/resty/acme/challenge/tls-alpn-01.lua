@@ -8,175 +8,13 @@ local x509 = require("resty.openssl.x509")
 local altname = require("resty.openssl.x509.altname")
 local extension = require("resty.openssl.x509.extension")
 local objects = require("resty.openssl.objects")
+local ssl_ctx = require("resty.openssl.ssl_ctx")
 
 
 local _M = {}
 local mt = {__index = _M}
 
 -- Ref: https://tools.ietf.org/html/draft-ietf-acme-tls-alpn-07
-
-
-ffi.cdef [[
-  typedef long off_t;
-  typedef unsigned int socklen_t; // windows uses int, same size
-  typedef unsigned short in_port_t;
-
-  typedef struct ssl_st SSL;
-  typedef struct ssl_ctx_st SSL_CTX;
-
-  typedef long (*ngx_recv_pt)(void *c, void *buf, size_t size);
-  typedef long (*ngx_recv_chain_pt)(void *c, void *in,
-      off_t limit);
-  typedef long (*ngx_send_pt)(void *c, void *buf, size_t size);
-  typedef void *(*ngx_send_chain_pt)(void *c, void *in,
-      off_t limit);
-
-  typedef struct {
-    size_t             len;
-    void               *data;
-  } ngx_str_t;
-
-  typedef struct {
-    SSL             *connection;
-    SSL_CTX         *session_ctx;
-    // trimmed
-  } ngx_ssl_connection_s;
-]]
-
-local ngx_version = ngx.config.nginx_version
-if ngx_version == 1015008 then
-  -- 1.15.8
-  ffi.cdef [[
-  typedef struct {
-    void               *data;
-    void               *read;
-    void               *write;
-
-    int                 fd;
-
-    ngx_recv_pt         recv;
-    ngx_send_pt         send;
-    ngx_recv_chain_pt   recv_chain;
-    ngx_send_chain_pt   send_chain;
-
-    void               *listening;
-
-    off_t               sent;
-
-    void               *log;
-
-    void               *pool;
-
-    int                 type;
-
-    void                *sockaddr;
-    socklen_t           socklen;
-    ngx_str_t           addr_text;
-
-    ngx_str_t           proxy_protocol_addr;
-    in_port_t           proxy_protocol_port;
-
-    ngx_ssl_connection_s  *ssl;
-    // trimmed
-  } ngx_connection_s;
-  ]]
-elseif ngx_version == 1017008 or ngx_version == 1019003 then
-  -- 1.17.8, 1.19.3
-  ffi.cdef [[
-  typedef struct {
-    ngx_str_t           src_addr;
-    ngx_str_t           dst_addr;
-    in_port_t           src_port;
-    in_port_t           dst_port;
-  } ngx_proxy_protocol_t;
-
-  typedef struct {
-    void               *data;
-    void               *read;
-    void               *write;
-
-    int                 fd;
-
-    ngx_recv_pt         recv;
-    ngx_send_pt         send;
-    ngx_recv_chain_pt   recv_chain;
-    ngx_send_chain_pt   send_chain;
-
-    void               *listening;
-
-    off_t               sent;
-
-    void               *log;
-
-    void               *pool;
-
-    int                 type;
-
-    void                *sockaddr;
-    socklen_t           socklen;
-    ngx_str_t           addr_text;
-
-    // https://github.com/nginx/nginx/commit/be932e81a1531a3ba032febad968fc2006c4fa48
-    ngx_proxy_protocol_t  *proxy_protocol;
-
-    ngx_ssl_connection_s  *ssl;
-    // trimmed
-  } ngx_connection_s;
-]]
-else
-  error("tls-alpn-01 challenge doesn't support Nginx version " .. ngx_version, 2)
-end
-
-ffi.cdef [[
-  typedef struct {
-      ngx_connection_s                     *connection;
-      // trimmed
-  } ngx_stream_lua_request_s;
-
-  typedef struct {
-    unsigned int                     signature;         /* "HTTP" */
-
-    ngx_connection_s                 *connection;
-    // trimmed
-  } ngx_http_request_s;
-
-  typedef int (*SSL_CTX_alpn_select_cb_func)(SSL *ssl,
-                                           const unsigned char **out,
-                                           unsigned char *outlen,
-                                           const unsigned char *in,
-                                           unsigned int inlen,
-                                           void *arg);
-
-  void SSL_CTX_set_alpn_select_cb(SSL_CTX *ctx,
-                                           SSL_CTX_alpn_select_cb_func cb,
-                                           void *arg);
-
-  int SSL_select_next_proto(unsigned char **out, unsigned char *outlen,
-                           const unsigned char *server,
-                           unsigned int server_len,
-                           const unsigned char *client,
-                           unsigned int client_len);
-]]
-
-local get_request
-do
-    local ok, exdata = pcall(require, "thread.exdata")
-    if ok and exdata then
-        function get_request()
-            local r = exdata()
-            if r ~= nil then
-                return r
-            end
-        end
-
-    elseif false then
-        local getfenv = getfenv
-
-        function get_request()
-            return getfenv(0).__ngx_req
-        end
-    end
-end
 
 local ssl_find_proto_acme_tls = function(client_alpn)
   local len = 1
@@ -207,20 +45,12 @@ local alpn_select_cb = ffi.cast("SSL_CTX_alpn_select_cb_func", function(_, out, 
 end)
 
 local function inject_tls_alpn()
-  local c = get_request()
-  if ngx.config.subsystem == "stream" then
-    c = ffi.cast("ngx_stream_lua_request_s*", c)
-  else -- http
-    c = ffi.cast("ngx_http_request_s*", c)
-  end
-
-  local ngx_ssl = c.connection.ssl
-  if ngx_ssl == nil then
-    ngx.log(ngx.WARN, "inject_tls_alpn: no ssl")
+  local ssl_ctx, err = ssl_ctx.from_request()
+  if err then
+    ngx.log(ngx.WARN, "inject_tls_alpn: ", err)
     return
   end
-  local ssl_ctx = ngx_ssl.session_ctx
-  ffi.C.SSL_CTX_set_alpn_select_cb(ssl_ctx, alpn_select_cb, nil)
+  ffi.C.SSL_CTX_set_alpn_select_cb(ssl_ctx.ctx, alpn_select_cb, nil)
   return true
 end
 
