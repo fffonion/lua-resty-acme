@@ -196,7 +196,7 @@ function _M:jws(url, payload, nonce)
     return nil, "url is not defined"
   end
 
-  if nonce == nil then
+  if not nonce then
     local err
     nonce, err = self:new_nonce()
     if err then
@@ -305,9 +305,13 @@ function _M:post(url, payload, headers, nonce)
     body = json.decode(resp.body)
   elseif resp.headers['Content-Type']:sub(1, 24) == "application/problem+json" then
     body = json.decode(resp.body)
-    if body.type == 'urn:ietf:params:acme:error:badNonce' then
-      log(ngx_DEBUG, "bad nonce: recoverable error, retrying")
-      return self:post(url, payload, headers, resp.headers["Replay-Nonce"])
+    if body.type == 'urn:ietf:params:acme:error:badNonce' and resp.headers["Replay-Nonce"] then
+      if not nonce then
+        log(ngx_WARN, "bad nonce: recoverable error, retrying")
+        return self:post(url, payload, headers, resp.headers["Replay-Nonce"])
+      else
+        return nil, nil, "bad nonce: failed again, bailing out"
+      end
     else
       return nil, nil, body.detail or body.type
     end
