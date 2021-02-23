@@ -148,7 +148,7 @@ domain_whitelist = { "domain1.com", "domain2.com", "domain3.com" },
 To match a pattern in your domain name, for example all subdomains under `example.com`, use:
 
 ```lua
-domain_whitelist_callback = function(domain)
+domain_whitelist_callback = function(domain, source)
     return ngx.re.match(domain, [[\.example\.com$]], "jo")
 end
 ```
@@ -158,7 +158,7 @@ It's possible to use cosocket API here. Do note that this will increase the SSL 
 latency.
 
 ```lua
-domain_whitelist_callback = function(domain)
+domain_whitelist_callback = function(domain, source)
     -- send HTTP request
     local http = require("resty.http")
     local res, err = httpc:request_uri("http://example.com")
@@ -169,6 +169,10 @@ domain_whitelist_callback = function(domain)
 end}),
 ```
 
+`domain_whitelist_callback` function is provided request source as a second argument,
+which can be either `server` (on incoming HTTP request) or `update_cert`
+(when certificate is generated or renewed). This allows to use cached
+values on hot path (`server`) while fetching fresh data on `update_cert`.
 
 ## tls-alpn-01 challenge
 
@@ -300,7 +304,7 @@ All normal https traffic listens on `unix:/tmp/nginx-default.sock`.
 
 ```
                                                 [stream server unix:/tmp/nginx-tls-alpn.sock ssl]
-                                            Y / 
+                                            Y /
 [stream server 443] --- ALPN is acme-tls ?
                                             N \
                                                 [http server unix:/tmp/nginx-default.sock ssl]

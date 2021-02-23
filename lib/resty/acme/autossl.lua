@@ -209,6 +209,10 @@ function AUTOSSL.update_cert(data)
     AUTOSSL.client_initialized = true
   end
 
+  if not AUTOSSL.is_domain_whitelisted(data.domain, 'update_cert') then
+    return "cert update is not allowed for domain " .. data.domain
+  end
+
   -- Note that we lock regardless of key types
   -- Let's encrypt tends to have a (undocumented?) behaviour that if
   -- you submit an order with different CSR while the previous order is still pending
@@ -260,7 +264,7 @@ function AUTOSSL.check_renew()
       })
 
       if err then
-        log(ngx_ERR, "failed to renew certificate for domain ", domain)
+        log(ngx_ERR, "failed to renew certificate for domain ", domain, " error: ", err)
       else
         log(ngx_INFO, "successfully renewed ", deserialized.type, " cert for domain ", domain)
       end
@@ -380,6 +384,16 @@ function AUTOSSL.serve_tls_alpn_challenge()
   AUTOSSL.client:serve_tls_alpn_challenge()
 end
 
+-- source = server | update_cert
+function AUTOSSL.is_domain_whitelisted(domain, source)
+  if domain_whitelist_callback then
+    return domain_whitelist_callback(domain, source)
+  elseif domain_whitelist then
+    return domain_whitelist[domain]
+  else
+    return true
+  end
+end
 
 function AUTOSSL.ssl_certificate()
   local domain, err = ssl.server_name()
@@ -391,10 +405,7 @@ function AUTOSSL.ssl_certificate()
 
   domain = string.lower(domain)
 
-  if domain_whitelist_callback and not domain_whitelist_callback(domain) then
-    log(ngx_INFO, "domain ", domain, " does not pass whitelist_callback, skipping")
-    return
-  elseif domain_whitelist and not domain_whitelist[domain] then
+  if not AUTOSSL.is_domain_whitelisted(domain, 'server') then
     log(ngx_INFO, "domain ", domain, " not in whitelist, skipping")
     return
   end
