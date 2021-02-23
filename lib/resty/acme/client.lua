@@ -184,9 +184,10 @@ end
 
 --- Enclose the provided payload in JWS
 --
--- @param url        ACME service URL
+-- @param url       ACME service URL
 -- @param payload   (json) data which will be wrapped in JWS
-function _M:jws(url, payload)
+-- @param nonce     nonce to be used in JWS, if not provided new nonce will be requested
+function _M:jws(url, payload, nonce)
   if not self.account_pkey then
     return nil, "account key does not specified"
   end
@@ -195,9 +196,12 @@ function _M:jws(url, payload)
     return nil, "url is not defined"
   end
 
-  local nonce, err = self:new_nonce()
-  if err then
-    return nil, "can't get new nonce from acme server"
+  if not nonce then
+    local err
+    nonce, err = self:new_nonce()
+    if err then
+      return nil, "can't get new nonce from acme server"
+    end
   end
 
   local jws = {
@@ -268,7 +272,7 @@ end
 -- @param headers   Lua table with request headers
 --
 -- @return Response object or tuple (nil, msg) on errors
-function _M:post(url, payload, headers)
+function _M:post(url, payload, headers, nonce)
   local httpc = new_httpc()
   if not headers then
     headers = {
@@ -278,7 +282,7 @@ function _M:post(url, payload, headers)
     headers["content-type"] = "application/jose+json"
   end
 
-  local jws, err = self:jws(url, payload)
+  local jws, err = self:jws(url, payload, nonce)
   if not jws then
     return nil, nil, err
   end
@@ -301,7 +305,16 @@ function _M:post(url, payload, headers)
     body = json.decode(resp.body)
   elseif resp.headers['Content-Type']:sub(1, 24) == "application/problem+json" then
     body = json.decode(resp.body)
-    return nil, nil, body.detail or body.type
+    if body.type == 'urn:ietf:params:acme:error:badNonce' and resp.headers["Replay-Nonce"] then
+      if not nonce then
+        log(ngx_WARN, "bad nonce: recoverable error, retrying")
+        return self:post(url, payload, headers, resp.headers["Replay-Nonce"])
+      else
+        return nil, nil, "bad nonce: failed again, bailing out"
+      end
+    else
+      return nil, nil, body.detail or body.type
+    end
   else
     body = resp.body
   end
