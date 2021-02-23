@@ -490,7 +490,7 @@ function AUTOSSL.get_certkey(domain, typ)
     error("domain must be a string")
   end
 
-  return get_certkey_from_storage(domain, typ or "rsa")
+  return get_certkey(domain, typ or "rsa")
 end
 
 return AUTOSSL
