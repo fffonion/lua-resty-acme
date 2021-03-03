@@ -40,7 +40,7 @@ local default_config = {
   domain_whitelist_callback = nil,
   -- certificate failure cooloff period, in seconds
   failure_cooloff = 300,
-  -- certificate failure cooloff optional function
+  -- certificate failure cooloff function, receives domain name and attempt count, should return cooloff period in seconds
   failure_cooloff_callback = nil,
   -- the threshold to renew a cert before it expires, in seconds
   renew_threshold = 7 * 86400,
@@ -77,6 +77,7 @@ local update_cert_lock_key_prefix = "update_lock:"
 local domain_cache_key_prefix = "domain:"
 local account_private_key_prefix = "account_key:"
 local certificate_failure_lock_key_prefix = "failure_lock:"
+local certificate_failure_count_prefix = "failed_attempts:"
 
 -- get cert and key cdata with caching
 -- domain, typ, raw
@@ -239,12 +240,20 @@ function AUTOSSL.update_cert(data)
 
   err = update_cert_handler(data)
 
+  local failure_count_key = certificate_failure_count_prefix .. ":" .. data.domain
   if err then
+    local count_storage, _ = AUTOSSL.storage:get(failure_count_key)
+    local count = (count_storage or 0) + 1
+    AUTOSSL.storage:set(failure_count_key, count)
+
     if failure_cooloff_callback then
-      failure_cooloff_callback(domain, failure_lock_key, AUTOSSL.storage)
+      local cooloff = failure_cooloff_callback(domain, count)
+      AUTOSSL.storage:add(failure_lock_key, "1", cooloff)
     else
       AUTOSSL.storage:add(failure_lock_key, "1", AUTOSSL.config.failure_cooloff)
     end
+  else
+    AUTOSSL.storage:set(failure_count_key, 0)
   end
 
   -- yes we don't release lock, but wait it to expire after negative cache is cleared
