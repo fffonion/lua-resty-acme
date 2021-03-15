@@ -209,7 +209,7 @@ function AUTOSSL.update_cert(data)
     AUTOSSL.client_initialized = true
   end
 
-  if not AUTOSSL.is_domain_whitelisted(data.domain, 'update_cert') then
+  if not AUTOSSL.is_domain_whitelisted(data.domain, true) then
     return "cert update is not allowed for domain " .. data.domain
   end
 
@@ -384,10 +384,9 @@ function AUTOSSL.serve_tls_alpn_challenge()
   AUTOSSL.client:serve_tls_alpn_challenge()
 end
 
--- source = server | update_cert
-function AUTOSSL.is_domain_whitelisted(domain, source)
+function AUTOSSL.is_domain_whitelisted(domain, is_new_cert_needed)
   if domain_whitelist_callback then
-    return domain_whitelist_callback(domain, source)
+    return domain_whitelist_callback(domain, is_new_cert_needed)
   elseif domain_whitelist then
     return domain_whitelist[domain]
   else
@@ -405,7 +404,7 @@ function AUTOSSL.ssl_certificate()
 
   domain = string.lower(domain)
 
-  if not AUTOSSL.is_domain_whitelisted(domain, 'server') then
+  if not AUTOSSL.is_domain_whitelisted(domain, false) then
     log(ngx_INFO, "domain ", domain, " not in whitelist, skipping")
     return
   end

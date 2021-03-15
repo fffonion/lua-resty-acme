@@ -148,7 +148,7 @@ domain_whitelist = { "domain1.com", "domain2.com", "domain3.com" },
 To match a pattern in your domain name, for example all subdomains under `example.com`, use:
 
 ```lua
-domain_whitelist_callback = function(domain, source)
+domain_whitelist_callback = function(domain, is_new_cert_needed)
     return ngx.re.match(domain, [[\.example\.com$]], "jo")
 end
 ```
@@ -158,7 +158,7 @@ It's possible to use cosocket API here. Do note that this will increase the SSL 
 latency.
 
 ```lua
-domain_whitelist_callback = function(domain, source)
+domain_whitelist_callback = function(domain, is_new_cert_needed)
     -- send HTTP request
     local http = require("resty.http")
     local res, err = httpc:request_uri("http://example.com")
@@ -169,10 +169,8 @@ domain_whitelist_callback = function(domain, source)
 end}),
 ```
 
-`domain_whitelist_callback` function is provided request source as a second argument,
-which can be either `server` (on incoming HTTP request) or `update_cert`
-(when certificate is generated or renewed). This allows to use cached
-values on hot path (`server`) while fetching fresh data on `update_cert`.
+`domain_whitelist_callback` function is provided with a second argument,
+which indicates whether the certificate is about to be served on incoming HTTP request (false) or new certificate is about to be requested (true). This allows to use cached values on hot path (serving requests) while fetching fresh data from storage for new certificates. One may also implement different logic, e.g. do extra checks before requesting new cert.
 
 ## tls-alpn-01 challenge
 
