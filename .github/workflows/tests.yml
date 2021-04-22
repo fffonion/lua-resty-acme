@@ -100,7 +100,7 @@ jobs:
         git clone -b 0.3.0 https://github.com/spacewander/luafilesystem ../luafilesystem-ffi
         git clone https://github.com/jkeys089/lua-resty-hmac ../lua-resty-hmac && pushd ../lua-resty-hmac && git checkout 79a4929 && popd
         git clone https://github.com/iresty/lua-typeof ../lua-typeof
-        git clone https://github.com/api7/lua-resty-etcd ../lua-resty-etcd
+        git clone https://github.com/api7/lua-resty-etcd ../lua-resty-etcd -b v1.4.4
         cp -r ../lua-resty-lrucache/lib/* ../lua-resty-redis/lib/* ../lua-resty-http/lib/* ../lua-resty-openssl/lib/* ../lua-typeof/lib/* ../lua-resty-etcd/lib/* ../lib/
         cp ../luafilesystem-ffi/lfs_ffi.lua ../lib/
         find ../lib
