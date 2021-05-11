@@ -553,8 +553,6 @@ storage_config = {
     port = 8200,
     -- secrets kv prefix path
     kv_path = "acme",
-    -- Vault token
-    token = nil,
     -- timeout in ms
     timeout = 2000,
     -- use HTTPS
@@ -563,6 +561,16 @@ storage_config = {
     tls_verify = true
     -- SNI used in request, default to host if omitted
     tls_server_name = nil,
+    -- Auth Method, default to token, can be "token" or "kubernetes"
+    auth_method = "token"
+    -- Vault token
+    token = nil,
+    -- Vault's authentication path to use
+    auth_path =  "kubernetes",
+    -- The role to try and assign
+    auth_role = nil,
+    -- The path to the JWT
+    jwt_path = "/var/run/secrets/kubernetes.io/serviceaccount/token",
 }
 ```
 
