@@ -574,6 +574,23 @@ storage_config = {
 }
 ```
 
+#### Support for different auth method
+
+- Token: This is the default and allows to pass a literal "token" in the configuration
+- Kubernetes: Via this method, one can utilize vault's built-in auth method for kubernetes
+  What this basically this is take the service account token and validates it has been signed by Kubernetes CA.
+  The major benefit here, is that config files don't expose your token anymore.
+
+  The following configurations apply here:
+  ```lua
+    -- Vault's authentication path to use
+    auth_path =  "kubernetes",
+    -- The role to try and assign
+    auth_role = nil,
+    -- The path to the JWT
+    jwt_path = "/var/run/secrets/kubernetes.io/serviceaccount/token",
+   ```
+
 ### consul
 
 Hashicorp [Consul](https://www.consul.io/) based storage. The default config is:
@@ -622,6 +639,7 @@ Credits
 =======
 
 - Improvements of `file` storage by [@dbalagansky](https://github.com/dbalagansky)
+- Addition of kubernetes auth in 'vault' storage by [@UXabre](https://github.com/UXabre/)
 
 
 Copyright and License
