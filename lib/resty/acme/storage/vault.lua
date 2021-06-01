@@ -60,14 +60,14 @@ function _M.new(conf)
 end
 
 local function api(self, method, uri, payload)
-  local ok, err
+  local _, err
   -- vault don't keepalive, we create a new instance for every request
   local client = http:new()
   client:set_timeout(self.timeout)
 
   local payload = payload and cjson.encode(payload)
 
-  ok, err = client:connect(self.host, self.port)
+  _, err = client:connect(self.host, self.port)
   if err then
     return nil, err
   end
@@ -210,7 +210,7 @@ function _M:list(prefix)
   local ret = {}
   local prefix_length = #prefix
   for _, key in ipairs(res['data']['keys']) do
-    local key, err = ngx.re.match(key, [[([^/]+)$]], "jo")
+    local key, _ = ngx.re.match(key, [[([^/]+)$]], "jo")
     if key then
       key = key[1]
       if key:sub(1, prefix_length) == prefix then
