@@ -200,7 +200,7 @@ function _M:jws(url, payload, nonce)
     local err
     nonce, err = self:new_nonce()
     if err then
-      return nil, "can't get new nonce from acme server"
+      return nil, "can't get new nonce from acme server: " .. err
     end
   end
 
