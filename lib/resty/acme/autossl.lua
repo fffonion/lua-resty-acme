@@ -327,11 +327,11 @@ function AUTOSSL.init(autossl_config, acme_config)
     if autossl_config.domain_key_paths[typ] then
       local domain_key_f, err = io.open(autossl_config.domain_key_paths[typ])
       if err then
-        error(err)
+        error("failed to open domain_key: " .. err)
       end
       local domain_key_pem, err = domain_key_f:read("*a")
       if err then
-        error(err)
+        error("failed to read domain key: " .. err)
       end
       domain_key_f:close()
       -- sanity check of the pem content, will error out if it's invalid
@@ -345,7 +345,7 @@ function AUTOSSL.init(autossl_config, acme_config)
   local client, err = acme.new(acme_config)
 
   if err then
-    error(err)
+    error("failed to initialize ACME client: " .. err)
   end
 
   AUTOSSL.client = client
@@ -358,14 +358,14 @@ function AUTOSSL.init_worker()
   local storagemod = require(AUTOSSL.config.storage_adapter)
   local storage, err = storagemod.new(AUTOSSL.config.storage_config)
   if err then
-    error(err)
+    error("failed to initialize storage: " .. err)
   end
   AUTOSSL.storage = storage
 
   if not AUTOSSL.config.account_key_path then
     local account_key, err = AUTOSSL.load_account_key_storage()
     if err then
-      error(err)
+      error("failed to load account key from storage: " .. err)
     end
     local ok, err = AUTOSSL.client:set_account_key(account_key)
     if err then
