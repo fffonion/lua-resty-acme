@@ -29,8 +29,6 @@ function _M:serve_challenge()
     ngx.exit(500)
   end
 
-  local uri = ngx.var.request_uri
-
   local captures, err =
     ngx.re.match(ngx.var.request_uri, [[\.well-known/]] .. self.uri_prefix .. "/(.+)", "jo")
 

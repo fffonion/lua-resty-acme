@@ -32,7 +32,7 @@ local function op(self, op, ...)
   end
   
   if self.auth then
-    ok, err = client:auth(self.auth)
+    local _, err = client:auth(self.auth)
     if err then
       return nil, "authentication failed " .. err
     end
@@ -59,7 +59,7 @@ function _M:add(k, v, ttl)
     return "exists"
   end
   if ttl then
-    ok, err = op(self, 'pexpire', k, math.floor(ttl * 1000))
+    local _, err = op(self, 'pexpire', k, math.floor(ttl * 1000))
     if err then
       return err
     end
@@ -67,12 +67,12 @@ function _M:add(k, v, ttl)
 end
 
 function _M:set(k, v, ttl)
-  local ok, err = op(self, 'set', k, v)
+  local _, err = op(self, 'set', k, v)
   if err then
     return err
   end
   if ttl then
-    ok, err = op(self, 'pexpire', k, math.floor(ttl * 1000))
+    local _, err = op(self, 'pexpire', k, math.floor(ttl * 1000))
     if err then
       return err
     end
@@ -80,7 +80,7 @@ function _M:set(k, v, ttl)
 end
 
 function _M:delete(k)
-  local ok, err = op(self, 'del', k)
+  local _, err = op(self, 'del', k)
   if err then
     return err
   end

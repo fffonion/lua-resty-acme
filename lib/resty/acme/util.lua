@@ -43,7 +43,7 @@ local function create_csr(domain_pkey, ...)
     return nil, "failed to add subject name: " .. err
   end
 
-  local alt, ok, err
+  local alt, err
   -- add subject name to altname as well, some implementaions
   -- like ZeroSSL requires that
   if #{...} > 0 then

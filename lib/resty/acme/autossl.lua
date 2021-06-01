@@ -101,7 +101,7 @@ local function get_certkey_parsed(domain, typ)
 
   -- pull from storage
   local cache, err_ret
-  while true do
+  while true do -- luacheck: ignore
     local deserialized, err = get_certkey(domain, typ)
     if err then
       err_ret = "failed to read from storage err: " .. err
@@ -205,7 +205,7 @@ function AUTOSSL.update_cert(data)
       log(ngx_ERR, "error during acme init: ", err)
       return
     end
-    local kid, err = AUTOSSL.client:new_account()
+    local _ --[[kid]], err = AUTOSSL.client:new_account()
     if err then
       log(ngx_ERR, "error during acme login: ", err)
       return
@@ -367,7 +367,7 @@ function AUTOSSL.init_worker()
     if err then
       error("failed to load account key from storage: " .. err)
     end
-    local ok, err = AUTOSSL.client:set_account_key(account_key)
+    local _, err = AUTOSSL.client:set_account_key(account_key)
     if err then
       error("failed to set account key: " .. err)
     end

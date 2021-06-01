@@ -27,7 +27,7 @@ end
 
 -- set the key regardless of it's existence
 function _M:set(k, v, ttl)
-  local res, err = self.client:set(k, v, ttl)
+  local _, err = self.client:set(k, v, ttl)
   if err then
     return err
   end
@@ -45,7 +45,7 @@ function _M:add(k, v, ttl)
 end
 
 function _M:delete(k)
-  local res, err = self.client:delete(k)
+  local _, err = self.client:delete(k)
   if err then
     return err
   end
