@@ -111,7 +111,7 @@ function _M.new(conf)
   end
 
   if conf.account_key then
-    local ok, err = set_account_key(self, conf.account_key)
+    local _, err = set_account_key(self, conf.account_key)
     if err then
       return nil, err
     end
@@ -342,6 +342,9 @@ function _M:new_account()
       return nil, "eab_handler undefined while EAB is required by CA"
     end
     local eab_kid, eab_hmac_key, err = self.eab_handler(self.conf.account_email)
+    if err then
+      return nil, "eab_handler returned an error: " .. err
+    end
     self.eab_kid = eab_kid
     self.eab_hmac_key = decode_base64url(eab_hmac_key)
   end
@@ -403,12 +406,12 @@ function _M:new_order(...)
 end
 
 local function watch_order_status(self, order_url, target)
-  local order_status, err, _
+  local order_status, err
   for _, t in pairs(wait_backoff_series) do
     ngx.sleep(t)
     -- POST-as-GET request with empty payload
     order_status, _, err = self:post(order_url)
-    log(ngx_DEBUG, "check order: ", json.encode(order_status))
+    log(ngx_DEBUG, "check order: ", json.encode(order_status), " err: ", err)
     if order_status then
       if order_status.status == target then
         break

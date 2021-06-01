@@ -1,5 +1,4 @@
 local ffi = require("ffi")
-local sub = string.sub
 local ssl = require "ngx.ssl"
 
 local pkey = require("resty.openssl.pkey")
@@ -16,20 +15,20 @@ local mt = {__index = _M}
 
 -- Ref: https://tools.ietf.org/html/draft-ietf-acme-tls-alpn-07
 
-local ssl_find_proto_acme_tls = function(client_alpn)
-  local len = 1
-  local acme_found
-  while len < #client_alpn do
-    local i = string.byte(sub(client_alpn, len, len+1))
-    local proto = sub(client_alpn, len+1, len+2+i)
-    if proto == acme_protocol_name then
-      acme_found = true
-      break
-    end
-    len = len + i + 1
-  end
-  return acme_found
-end
+-- local ssl_find_proto_acme_tls = function(client_alpn)
+--   local len = 1
+--   local acme_found
+--   while len < #client_alpn do
+--     local i = string.byte(sub(client_alpn, len, len+1))
+--     local proto = sub(client_alpn, len+1, len+2+i)
+--     if proto == acme_protocol_name then
+--       acme_found = true
+--       break
+--     end
+--     len = len + i + 1
+--   end
+--   return acme_found
+-- end
 
 local acme_protocol_name_wire = '\010acme-tls/1'
 
