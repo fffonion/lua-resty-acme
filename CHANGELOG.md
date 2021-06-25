@@ -2,6 +2,20 @@
 ## [Unreleased]
 
 
+<a name="0.6.1"></a>
+## [0.6.1] - 2021-06-25
+### feat
+- **storage/vault:** add support for kubernetes auth ([#37](https://github.com/fffonion/lua-resty-acme/issues/37)) [93c2121](https://github.com/fffonion/lua-resty-acme/commit/93c212132a5d28b93269675c63a88a4e452001dc)
+
+### fix
+- ***:** popup errors from lower functions [a19e9c8](https://github.com/fffonion/lua-resty-acme/commit/a19e9c8af9179a81815c653d176aa0bfc27e532b)
+- **autossl:** pass storage config to acme client ([#43](https://github.com/fffonion/lua-resty-acme/issues/43)) [ef1e541](https://github.com/fffonion/lua-resty-acme/commit/ef1e54112d1bdda187812a0e6c96d8b134fd4d04)
+- **autossl:** get_certkey always returning raw PEM text instead of cdata ([#33](https://github.com/fffonion/lua-resty-acme/issues/33)) [a1782c9](https://github.com/fffonion/lua-resty-acme/commit/a1782c994209450fc41deca8bf970d005fd17126)
+- **client:** retry on bad nonce ([#34](https://github.com/fffonion/lua-resty-acme/issues/34)) [bed74d3](https://github.com/fffonion/lua-resty-acme/commit/bed74d367c23c430a73d0bcd0764417cbec7b40e)
+- **client:** trigger only pending challenges ([#32](https://github.com/fffonion/lua-resty-acme/issues/32)) [3e3e940](https://github.com/fffonion/lua-resty-acme/commit/3e3e940a187e58dbb414fe543a11964454567c63)
+- **tls-alpn-01:** delegate get_ssl_ctx to lua-resty-openssl [cd99b84](https://github.com/fffonion/lua-resty-acme/commit/cd99b8481a7b57adc344fbae4b0c66fa09f8086b)
+
+
 <a name="0.6.0"></a>
 ## [0.6.0] - 2021-02-19
 ### fix
@@ -178,7 +192,8 @@
 - ***:** cleanup [2e8f3ed](https://github.com/fffonion/lua-resty-acme/commit/2e8f3ed8ac95076537272311338c1256e2a31e67)
 
 
-[Unreleased]: https://github.com/fffonion/lua-resty-acme/compare/0.6.0...HEAD
+[Unreleased]: https://github.com/fffonion/lua-resty-acme/compare/0.6.1...HEAD
+[0.6.1]: https://github.com/fffonion/lua-resty-acme/compare/0.6.0...0.6.1
 [0.6.0]: https://github.com/fffonion/lua-resty-acme/compare/0.5.11...0.6.0
 [0.5.11]: https://github.com/fffonion/lua-resty-acme/compare/0.5.10...0.5.11
 [0.5.10]: https://github.com/fffonion/lua-resty-acme/compare/0.5.9...0.5.10
