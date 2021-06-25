@@ -47,7 +47,9 @@ local default_config = {
     shm_name = "acme"
   },
   -- the challenge types enabled
-  enabled_challenge_handlers = {"http-01"}
+  enabled_challenge_handlers = {"http-01"},
+  -- select preferred root CA issuer's Common Name if appliable
+  preferred_chain = nil,
 }
 
 local function new_httpc()
@@ -448,6 +450,22 @@ local function watch_order_status(self, order_url, target)
   return order_status
 end
 
+
+local rel_alternate_pattern = '<(.+)>;%s*rel="alternate"'
+local function parse_alternate_link(headers)
+  local link_header = headers["Link"]
+  if type(link_header) == "string" then
+    return link_header:match(rel_alternate_pattern)
+  elseif link_header then
+    for _, link in pairs(link_header) do
+      local m = link:match(rel_alternate_pattern)
+      if m then
+        return m
+      end
+    end
+  end
+end
+
 function _M:finalize(finalize_url, order_url, csr)
   local payload = {
     csr = encode_base64url(csr)
@@ -475,12 +493,42 @@ function _M:finalize(finalize_url, order_url, csr)
   end
 
   -- POST-as-GET request with empty payload
-  local body, _, err = self:post(order_status.certificate)
+  local body, headers, err = self:post(order_status.certificate)
   if err then
     return nil, "failed to fetch certificate: " .. err
   end
-  --, key:toPEM("private"))
-  return body, err
+
+  local preferred_chain = self.conf.preferred_chain
+  if not preferred_chain then
+    return body
+  end
+
+  local ok, err = util.check_chain_root_issuer(body, preferred_chain)
+  if not ok then
+    log(ngx_DEBUG, "configured preferred chain issuer CN \"", preferred_chain, "\" not found ",
+                    "in default chain, downloading alternate chain: ", err)
+    local alternate_link = parse_alternate_link(headers)
+    if not alternate_link then
+      log(ngx_WARN, "failed to fetch alternate chain because no alternate link is found, ",
+                    "fallback to default chain")
+    else
+      local body_alternate, _, err = self:post(alternate_link)
+
+      if err then
+        log(ngx_WARN, "failed to fetch alternate chain, fallback to default: ", err)
+      else
+        local ok, err = util.check_chain_root_issuer(body_alternate, preferred_chain)
+        if ok then
+          log(ngx_DEBUG, "alternate chain is selected")
+          return body_alternate
+        end
+        log(ngx_WARN, "configured preferred chain issuer CN \"", preferred_chain, "\" also not found ",
+                      "in alternate chain, fallback to default chain: ", err)
+      end
+    end
+  end
+
+  return body
 end
 
 -- create certificate workflow, used in new cert or renewal

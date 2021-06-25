@@ -368,7 +368,9 @@ where entropy is low.
 
 See also [Storage Adapters](#storage-adapters) below.
 
-To use a CA provider other than Let's Encrypt, pass `api_uri` in a table as second parameter:
+Pass config table directly to ACME client as second parameter. The following example
+demonstrates how to use a CA provider other than Let's Encrypt and also set
+the preferred chain.
 
 ```lua
 resty.acme.autossl.init({
@@ -376,6 +378,7 @@ resty.acme.autossl.init({
     account_email = "example@example.com",
   }, {
     api_uri = "https://acme.otherca.com/directory",
+    preferred_chain = "OtherCA PKI Root CA",
   }
 )
 ```
@@ -423,7 +426,9 @@ default_config = {
     shm_name = "acme"
   },
   -- the challenge types enabled, selection of `http-01` and `tls-alpn-01`
-  enabled_challenge_handlers = {"http-01"}
+  enabled_challenge_handlers = {"http-01"},
+    -- select preferred root CA issuer's Common Name if appliable
+  preferred_chain = nil,
 }
 ```
 
@@ -452,6 +457,11 @@ The following CA provider's EAB handler is supported by lua-resty-acme and user 
 need to implement their own `eab_handler`:
 
 - [ZeroSSL](https://zerossl.com/)
+
+`preferred_chain` is used to select a chain with matching Common Name in its root CA. For example,
+user can use use `"ISRG Root X1"` to force use the new default chain in Let's Encrypt. When no
+value is configured or the configured name is not found in any chain, the default chain will be
+used.
 
 See also [Storage Adapters](#storage-adapters) below.
 
