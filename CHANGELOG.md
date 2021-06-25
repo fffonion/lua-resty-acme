@@ -4,12 +4,9 @@
 
 <a name="0.6.1"></a>
 ## [0.6.1] - 2021-06-25
-### feat
-- **storage/vault:** add support for kubernetes auth ([#37](https://github.com/fffonion/lua-resty-acme/issues/37)) [93c2121](https://github.com/fffonion/lua-resty-acme/commit/93c212132a5d28b93269675c63a88a4e452001dc)
-
 ### fix
-- ***:** popup errors from lower functions [a19e9c8](https://github.com/fffonion/lua-resty-acme/commit/a19e9c8af9179a81815c653d176aa0bfc27e532b)
-- **autossl:** pass storage config to acme client ([#43](https://github.com/fffonion/lua-resty-acme/issues/43)) [ef1e541](https://github.com/fffonion/lua-resty-acme/commit/ef1e54112d1bdda187812a0e6c96d8b134fd4d04)
+- ***:** popup errors from lower functions [4e25b4d](https://github.com/fffonion/lua-resty-acme/commit/4e25b4dc4b10a77594546eaaceefe0418c91c3b7)
+- **autossl:** pass storage config to acme client ([#43](https://github.com/fffonion/lua-resty-acme/issues/43)) [102312f](https://github.com/fffonion/lua-resty-acme/commit/102312f51711ad0a5d12a30909fbb76134f973bd)
 - **autossl:** get_certkey always returning raw PEM text instead of cdata ([#33](https://github.com/fffonion/lua-resty-acme/issues/33)) [a1782c9](https://github.com/fffonion/lua-resty-acme/commit/a1782c994209450fc41deca8bf970d005fd17126)
 - **client:** retry on bad nonce ([#34](https://github.com/fffonion/lua-resty-acme/issues/34)) [bed74d3](https://github.com/fffonion/lua-resty-acme/commit/bed74d367c23c430a73d0bcd0764417cbec7b40e)
 - **client:** trigger only pending challenges ([#32](https://github.com/fffonion/lua-resty-acme/issues/32)) [3e3e940](https://github.com/fffonion/lua-resty-acme/commit/3e3e940a187e58dbb414fe543a11964454567c63)
