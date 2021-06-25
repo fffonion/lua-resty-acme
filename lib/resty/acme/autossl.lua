@@ -289,6 +289,9 @@ function AUTOSSL.init(autossl_config, acme_config)
     autossl_config.storage_adapter = "resty.acme.storage." .. autossl_config.storage_adapter
   end
 
+  acme_config.storage_adapter = autossl_config.storage_adapter
+  acme_config.storage_config = autossl_config.storage_config
+
   if autossl_config.account_key_path then
     acme_config.account_key = AUTOSSL.load_account_key(autossl_config.account_key_path)
   else

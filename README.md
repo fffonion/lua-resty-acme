@@ -416,6 +416,8 @@ default_config = {
   eab_hmac_key = nil,
   -- external account registering handler
   eab_handler = nil,
+  -- storage for challenge
+  storage_adapter = "shm",
   -- the storage config passed to storage adapter
   storage_config = {
     shm_name = "acme"
