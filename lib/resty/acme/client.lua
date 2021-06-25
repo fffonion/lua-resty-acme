@@ -508,18 +508,23 @@ function _M:finalize(finalize_url, order_url, csr)
     log(ngx_DEBUG, "configured preferred chain issuer CN \"", preferred_chain, "\" not found ",
                     "in default chain, downloading alternate chain: ", err)
     local alternate_link = parse_alternate_link(headers)
-    local body_alternate, _, err = self:post(alternate_link)
-
-    if err then
-      log(ngx_WARN, "failed to fetch alternate chain, fallback to default: ", err)
+    if not alternate_link then
+      log(ngx_WARN, "failed to fetch alternate chain because no alternate link is found, ",
+                    "fallback to default chain")
     else
-      local ok, err = util.check_chain_root_issuer(body_alternate, preferred_chain)
-      if ok then
-        log(ngx_DEBUG, "alternate chain is selected")
-        return body_alternate
+      local body_alternate, _, err = self:post(alternate_link)
+
+      if err then
+        log(ngx_WARN, "failed to fetch alternate chain, fallback to default: ", err)
+      else
+        local ok, err = util.check_chain_root_issuer(body_alternate, preferred_chain)
+        if ok then
+          log(ngx_DEBUG, "alternate chain is selected")
+          return body_alternate
+        end
+        log(ngx_WARN, "configured preferred chain issuer CN \"", preferred_chain, "\" also not found ",
+                      "in alternate chain, fallback to default chain: ", err)
       end
-      log(ngx_WARN, "configured preferred chain issuer CN \"", preferred_chain, "\" also not found ",
-                    "in alternate chain, fallback to default chain: ", err)
     end
   end
 
