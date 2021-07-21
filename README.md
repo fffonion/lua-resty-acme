@@ -429,8 +429,10 @@ default_config = {
   },
   -- the challenge types enabled, selection of `http-01` and `tls-alpn-01`
   enabled_challenge_handlers = {"http-01"},
-    -- select preferred root CA issuer's Common Name if appliable
+  -- select preferred root CA issuer's Common Name if appliable
   preferred_chain = nil,
+  -- callback function that allows to wait before signaling ACME server to validate
+  challenge_start_callback = nil,
 }
 ```
 
@@ -464,6 +466,20 @@ need to implement their own `eab_handler`:
 user can use use `"ISRG Root X1"` to force use the new default chain in Let's Encrypt. When no
 value is configured or the configured name is not found in any chain, the default chain will be
 used.
+
+`challenge_start_callback` is a callback function to allow the client to wait before signalling
+ACME server to start validate challenge. It's useful in a distributed setup where challenges take
+time to propogate. `challenge_start_callback` accepts `challenge_type` and `challenge_token`.
+The client calls this function every second until it returns `true` indicating challenge should start;
+if this `challenge_start_callback` is not set, no wait will be performed.
+
+```lua
+challenge_start_callback = function(challenge_type, challenge_token)
+  -- do something here
+  -- if we are good
+  return true
+end
+```
 
 See also [Storage Adapters](#storage-adapters) below.
 

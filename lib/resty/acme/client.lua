@@ -50,6 +50,8 @@ local default_config = {
   enabled_challenge_handlers = {"http-01"},
   -- select preferred root CA issuer's Common Name if appliable
   preferred_chain = nil,
+  -- callback function that allows to wait before signaling ACME server to validate
+  challenge_start_callback = nil,
 }
 
 local function new_httpc()
@@ -579,6 +581,11 @@ function _M:order_certificate(domain_key, ...)
         registered_challenges[registered_challenge_count + 1] = challenge.token
         registered_challenge_count = registered_challenge_count + 1
         log(ngx_DEBUG, "register challenge ", typ, ": ", challenge.token)
+        if self.conf.challenge_start_callback then
+          while not self.conf.challenge_start_callback(typ, challenge.token) do
+            ngx.sleep(1)
+          end
+        end
         -- signal server to start challenge check
         -- needs to be empty json body rather than empty string
         -- https://tools.ietf.org/html/rfc8555#section-7.5.1
