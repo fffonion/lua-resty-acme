@@ -423,7 +423,9 @@ default_config = {
     shm_name = "acme"
   },
   -- the challenge types enabled, selection of `http-01` and `tls-alpn-01`
-  enabled_challenge_handlers = {"http-01"}
+  enabled_challenge_handlers = {"http-01"},
+  -- callback function that allows to wait before signaling ACME server to validate
+  challenge_start_callback = nil,
 }
 ```
 
@@ -452,6 +454,20 @@ The following CA provider's EAB handler is supported by lua-resty-acme and user 
 need to implement their own `eab_handler`:
 
 - [ZeroSSL](https://zerossl.com/)
+
+`challenge_start_callback` is a callback function to allow the client to wait before signalling
+ACME server to start validate challenge. It's useful in a distributed setup where challenges take
+time to propogate. `challenge_start_callback` accepts `challenge_type` and `challenge_token`.
+The client calls this function every second until it returns `true` indicating challenge should start;
+if this `challenge_start_callback` is not set, no wait will be performed.
+
+```lua
+challenge_start_callback = function(challenge_type, challenge_token)
+  -- do something here
+  -- if we are good
+  return true
+end
+```
 
 See also [Storage Adapters](#storage-adapters) below.
 
