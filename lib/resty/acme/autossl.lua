@@ -48,7 +48,10 @@ local default_config = {
   storage_config = {
     shm_name = 'acme',
   },
+  -- the challenge types enabled
   enabled_challenge_handlers = { 'http-01' },
+  -- time to wait before signaling ACME server to validate in seconds
+  challenge_start_delay = 0,
 }
 
 local domain_pkeys = {}
@@ -305,6 +308,11 @@ function AUTOSSL.init(autossl_config, acme_config)
   end
   acme_config.account_email = autossl_config.account_email
   acme_config.enabled_challenge_handlers = autossl_config.enabled_challenge_handlers
+
+  acme_config.challenge_start_callback = function()
+    ngx.sleep(autossl_config.challenge_start_delay)
+    return true
+  end
 
   -- cache in global variable
   domain_key_types = autossl_config.domain_key_types

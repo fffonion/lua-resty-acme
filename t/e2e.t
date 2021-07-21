@@ -27,6 +27,8 @@ sub ::make_http_config{
                 domain_whitelist = setmetatable({}, { __index = function()
                     return true
                 end}),
+                -- bump up this slightly in test
+                challenge_start_delay = 5,
             })
         }
         init_worker_by_lua_block {
