@@ -2,6 +2,29 @@
 ## [Unreleased]
 
 
+<a name="0.6.2"></a>
+## [0.6.2] - 2021-07-22
+### feat
+- **autossl:** add challenge_start_delay [abc2e2e](https://github.com/fffonion/lua-resty-acme/commit/abc2e2eab2eb1220096163f84fdeee09df193db4)
+- **client:** add challenge_start_callback [2dc8df7](https://github.com/fffonion/lua-resty-acme/commit/2dc8df782b95d593dfbdea2186d2b8ab5d6af6be)
+
+### fix
+- ***:** popup errors from lower functions [4e25b4d](https://github.com/fffonion/lua-resty-acme/commit/4e25b4dc4b10a77594546eaaceefe0418c91c3b7)
+- **autossl:** pass storage config to acme client ([#43](https://github.com/fffonion/lua-resty-acme/issues/43)) [102312f](https://github.com/fffonion/lua-resty-acme/commit/102312f51711ad0a5d12a30909fbb76134f973bd)
+
+
+<a name="0.7.0"></a>
+## [0.7.0] - 2021-06-25
+### feat
+- **autossl:** check if domain is whitelisted before cert renewal ([#35](https://github.com/fffonion/lua-resty-acme/issues/35)) [942c007](https://github.com/fffonion/lua-resty-acme/commit/942c007711ba1a0f04b8f30f81443a46ae0ed412)
+- **client:** allow to read "alternate" link and select preferred chain ([#42](https://github.com/fffonion/lua-resty-acme/issues/42)) [ff17a74](https://github.com/fffonion/lua-resty-acme/commit/ff17a741d36f2058a21621c9191fda8513cb2c73)
+- **storage/vault:** add support for kubernetes auth ([#37](https://github.com/fffonion/lua-resty-acme/issues/37)) [93c2121](https://github.com/fffonion/lua-resty-acme/commit/93c212132a5d28b93269675c63a88a4e452001dc)
+
+### fix
+- ***:** popup errors from lower functions [a19e9c8](https://github.com/fffonion/lua-resty-acme/commit/a19e9c8af9179a81815c653d176aa0bfc27e532b)
+- **autossl:** pass storage config to acme client ([#43](https://github.com/fffonion/lua-resty-acme/issues/43)) [ef1e541](https://github.com/fffonion/lua-resty-acme/commit/ef1e54112d1bdda187812a0e6c96d8b134fd4d04)
+
+
 <a name="0.6.1"></a>
 ## [0.6.1] - 2021-06-25
 ### fix
@@ -189,7 +212,9 @@
 - ***:** cleanup [2e8f3ed](https://github.com/fffonion/lua-resty-acme/commit/2e8f3ed8ac95076537272311338c1256e2a31e67)
 
 
-[Unreleased]: https://github.com/fffonion/lua-resty-acme/compare/0.6.1...HEAD
+[Unreleased]: https://github.com/fffonion/lua-resty-acme/compare/0.6.2...HEAD
+[0.6.2]: https://github.com/fffonion/lua-resty-acme/compare/0.7.0...0.6.2
+[0.7.0]: https://github.com/fffonion/lua-resty-acme/compare/0.6.1...0.7.0
 [0.6.1]: https://github.com/fffonion/lua-resty-acme/compare/0.6.0...0.6.1
 [0.6.0]: https://github.com/fffonion/lua-resty-acme/compare/0.5.11...0.6.0
 [0.5.11]: https://github.com/fffonion/lua-resty-acme/compare/0.5.10...0.5.11
