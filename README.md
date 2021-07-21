@@ -356,6 +356,10 @@ default_config = {
   storage_config = {
     shm_name = 'acme',
   },
+  -- the challenge types enabled
+  enabled_challenge_handlers = { 'http-01' },
+  -- time to wait before signaling ACME server to validate in seconds
+  challenge_start_delay = 0,
 }
 ```
 
@@ -367,8 +371,6 @@ If `domain_key_paths` is not specified, a new private key will be generated
 for each certificate (4096-bits RSA and 256-bits prime256v1 ECC). Note that
 generating such key will block worker and will be especially noticable on VMs
 where entropy is low.
-
-See also [Storage Adapters](#storage-adapters) below.
 
 Pass config table directly to ACME client as second parameter. The following example
 demonstrates how to use a CA provider other than Let's Encrypt and also set
@@ -384,6 +386,12 @@ resty.acme.autossl.init({
   }
 )
 ```
+
+See also [Storage Adapters](#storage-adapters) below.
+
+When using distributed storage types, it's useful to bump up `challenge_start_delay` to allow
+changes in storage to propogate around. When `challenge_start_delay` is set to 0, no wait
+will be performed before start validating challenges.
 
 ### autossl.get_certkey
 
