@@ -4,6 +4,7 @@ info:
   title: CHANGELOG
   repository_url: https://github.com/fffonion/lua-resty-acme
 options:
+  sort: "semver"
   commits:
      filters:
        Type:
@@ -11,11 +12,11 @@ options:
          - fix
          - refactor
   commit_groups:
-    # title_maps:
-    #   feat: Features
-    #   fix: Bug Fixes
-    #   perf: Performance Improvements
-    #   refactor: Code Refactoring
+     title_maps:
+       feat: Features
+       fix: Bug Fixes
+       perf: Performance Improvements
+       refactor: Code Refactoring
   header:
     pattern: "^(\\w*)(?:\\(([\\w\\$\\.\\-\\*\\s\\/]*)\\))?\\s(.*)$"
     pattern_maps:
