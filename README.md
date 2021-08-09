@@ -148,7 +148,7 @@ domain_whitelist = { "domain1.com", "domain2.com", "domain3.com" },
 To match a pattern in your domain name, for example all subdomains under `example.com`, use:
 
 ```lua
-domain_whitelist_callback = function(domain)
+domain_whitelist_callback = function(domain, is_new_cert_needed)
     return ngx.re.match(domain, [[\.example\.com$]], "jo")
 end
 ```
@@ -158,7 +158,7 @@ It's possible to use cosocket API here. Do note that this will increase the SSL 
 latency.
 
 ```lua
-domain_whitelist_callback = function(domain)
+domain_whitelist_callback = function(domain, is_new_cert_needed)
     -- send HTTP request
     local http = require("resty.http")
     local res, err = httpc:request_uri("http://example.com")
@@ -169,6 +169,8 @@ domain_whitelist_callback = function(domain)
 end}),
 ```
 
+`domain_whitelist_callback` function is provided with a second argument,
+which indicates whether the certificate is about to be served on incoming HTTP request (false) or new certificate is about to be requested (true). This allows to use cached values on hot path (serving requests) while fetching fresh data from storage for new certificates. One may also implement different logic, e.g. do extra checks before requesting new cert.
 
 ## tls-alpn-01 challenge
 
@@ -300,7 +302,7 @@ All normal https traffic listens on `unix:/tmp/nginx-default.sock`.
 
 ```
                                                 [stream server unix:/tmp/nginx-tls-alpn.sock ssl]
-                                            Y / 
+                                            Y /
 [stream server 443] --- ALPN is acme-tls ?
                                             N \
                                                 [http server unix:/tmp/nginx-default.sock ssl]
@@ -354,6 +356,10 @@ default_config = {
   storage_config = {
     shm_name = 'acme',
   },
+  -- the challenge types enabled
+  enabled_challenge_handlers = { 'http-01' },
+  -- time to wait before signaling ACME server to validate in seconds
+  challenge_start_delay = 0,
 }
 ```
 
@@ -366,9 +372,9 @@ for each certificate (4096-bits RSA and 256-bits prime256v1 ECC). Note that
 generating such key will block worker and will be especially noticable on VMs
 where entropy is low.
 
-See also [Storage Adapters](#storage-adapters) below.
-
-To use a CA provider other than Let's Encrypt, pass `api_uri` in a table as second parameter:
+Pass config table directly to ACME client as second parameter. The following example
+demonstrates how to use a CA provider other than Let's Encrypt and also set
+the preferred chain.
 
 ```lua
 resty.acme.autossl.init({
@@ -376,9 +382,16 @@ resty.acme.autossl.init({
     account_email = "example@example.com",
   }, {
     api_uri = "https://acme.otherca.com/directory",
+    preferred_chain = "OtherCA PKI Root CA",
   }
 )
 ```
+
+See also [Storage Adapters](#storage-adapters) below.
+
+When using distributed storage types, it's useful to bump up `challenge_start_delay` to allow
+changes in storage to propogate around. When `challenge_start_delay` is set to 0, no wait
+will be performed before start validating challenges.
 
 ### autossl.get_certkey
 
@@ -416,12 +429,18 @@ default_config = {
   eab_hmac_key = nil,
   -- external account registering handler
   eab_handler = nil,
+  -- storage for challenge
+  storage_adapter = "shm",
   -- the storage config passed to storage adapter
   storage_config = {
     shm_name = "acme"
   },
   -- the challenge types enabled, selection of `http-01` and `tls-alpn-01`
-  enabled_challenge_handlers = {"http-01"}
+  enabled_challenge_handlers = {"http-01"},
+  -- select preferred root CA issuer's Common Name if appliable
+  preferred_chain = nil,
+  -- callback function that allows to wait before signaling ACME server to validate
+  challenge_start_callback = nil,
 }
 ```
 
@@ -450,6 +469,25 @@ The following CA provider's EAB handler is supported by lua-resty-acme and user 
 need to implement their own `eab_handler`:
 
 - [ZeroSSL](https://zerossl.com/)
+
+`preferred_chain` is used to select a chain with matching Common Name in its root CA. For example,
+user can use use `"ISRG Root X1"` to force use the new default chain in Let's Encrypt. When no
+value is configured or the configured name is not found in any chain, the default chain will be
+used.
+
+`challenge_start_callback` is a callback function to allow the client to wait before signalling
+ACME server to start validate challenge. It's useful in a distributed setup where challenges take
+time to propogate. `challenge_start_callback` accepts `challenge_type` and `challenge_token`.
+The client calls this function every second until it returns `true` indicating challenge should start;
+if this `challenge_start_callback` is not set, no wait will be performed.
+
+```lua
+challenge_start_callback = function(challenge_type, challenge_token)
+  -- do something here
+  -- if we are good
+  return true
+end
+```
 
 See also [Storage Adapters](#storage-adapters) below.
 
@@ -553,8 +591,6 @@ storage_config = {
     port = 8200,
     -- secrets kv prefix path
     kv_path = "acme",
-    -- Vault token
-    token = nil,
     -- timeout in ms
     timeout = 2000,
     -- use HTTPS
@@ -563,8 +599,35 @@ storage_config = {
     tls_verify = true
     -- SNI used in request, default to host if omitted
     tls_server_name = nil,
+    -- Auth Method, default to token, can be "token" or "kubernetes"
+    auth_method = "token"
+    -- Vault token
+    token = nil,
+    -- Vault's authentication path to use
+    auth_path =  "kubernetes",
+    -- The role to try and assign
+    auth_role = nil,
+    -- The path to the JWT
+    jwt_path = "/var/run/secrets/kubernetes.io/serviceaccount/token",
 }
 ```
+
+#### Support for different auth method
+
+- Token: This is the default and allows to pass a literal "token" in the configuration
+- Kubernetes: Via this method, one can utilize vault's built-in auth method for kubernetes
+  What this basically this is take the service account token and validates it has been signed by Kubernetes CA.
+  The major benefit here, is that config files don't expose your token anymore.
+
+  The following configurations apply here:
+  ```lua
+    -- Vault's authentication path to use
+    auth_path =  "kubernetes",
+    -- The role to try and assign
+    auth_role = nil,
+    -- The path to the JWT
+    jwt_path = "/var/run/secrets/kubernetes.io/serviceaccount/token",
+   ```
 
 ### consul
 
@@ -614,6 +677,7 @@ Credits
 =======
 
 - Improvements of `file` storage by [@dbalagansky](https://github.com/dbalagansky)
+- Addition of kubernetes auth in 'vault' storage by [@UXabre](https://github.com/UXabre/)
 
 
 Copyright and License

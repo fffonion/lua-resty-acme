@@ -1,6 +1,7 @@
 local ok, lfs = pcall(require, 'lfs_ffi')
 if not ok then
-  ok, lfs = pcall(require, 'lfs')
+  local _
+  _, lfs = pcall(require, 'lfs')
 end
 
 local _M = {}

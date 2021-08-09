@@ -52,7 +52,10 @@ local default_config = {
   storage_config = {
     shm_name = 'acme',
   },
+  -- the challenge types enabled
   enabled_challenge_handlers = { 'http-01' },
+  -- time to wait before signaling ACME server to validate in seconds
+  challenge_start_delay = 0,
 }
 
 local domain_pkeys = {}
@@ -79,40 +82,44 @@ local account_private_key_prefix = "account_key:"
 local certificate_failure_lock_key_prefix = "failure_lock:"
 local certificate_failure_count_prefix = "failed_attempts:"
 
+-- get cert from storage
+local function get_certkey(domain, typ)
+  local domain_key = domain_cache_key_prefix .. typ .. ":" .. domain
+  local serialized, err = AUTOSSL.storage:get(domain_key)
+  if err then
+    return nil, "failed to read from storage err: " .. err
+  end
+  if not serialized then
+    -- not found
+    return nil, nil -- silently ignored
+  end
+
+  local deserialized = json.decode(serialized)
+  if not deserialized then
+    return nil, "failed to deserialize cert key from storage"
+  end
+  return deserialized, nil
+end
+
 -- get cert and key cdata with caching
--- domain, typ, raw
-local function get_certkey(opts)
-  local typ = opts.type
-  local domain = opts.domain
+local function get_certkey_parsed(domain, typ)
   local data, _ --[[stale]], _ --[[flags]] = certs_cache[typ]:get(domain)
+
   if data then
     return data, nil
   end
 
   -- pull from storage
   local cache, err_ret
-  while true do
-    local domain_key = domain_cache_key_prefix .. typ .. ":" .. domain
-    local serialized, err = AUTOSSL.storage:get(domain_key)
+  while true do -- luacheck: ignore
+    local deserialized, err = get_certkey(domain, typ)
     if err then
       err_ret = "failed to read from storage err: " .. err
       break
     end
-
-    if not serialized then
+    if not deserialized then
       -- not found
       break
-    end
-
-    local deserialized = json.decode(serialized)
-    if not deserialized then
-      err_ret = "failed to deserialize cert key from storage"
-      break
-    end
-
-    -- raw returns unparsed pem text
-    if opts.raw then
-      return deserialized
     end
 
     local pkey, err = ssl.parse_pem_priv_key(deserialized.pkey)
@@ -149,7 +156,7 @@ local function update_cert_handler(data)
   local pkey
 
   if data.renew then
-    local certkey, err = get_certkey({ domain = domain, type = typ, raw = true })
+    local certkey, err = get_certkey(domain, typ)
     if err then
       log(ngx_ERR, "failed to read ", typ, " cert for domain: ", err)
     elseif not certkey or certkey == null then
@@ -208,7 +215,7 @@ function AUTOSSL.update_cert(data)
       log(ngx_ERR, "error during acme init: ", err)
       return
     end
-    local kid, err = AUTOSSL.client:new_account()
+    local _ --[[kid]], err = AUTOSSL.client:new_account()
     if err then
       log(ngx_ERR, "error during acme login: ", err)
       return
@@ -224,6 +231,10 @@ function AUTOSSL.update_cert(data)
   if failure_lock then
     ngx.log(ngx.INFO, "failure lock key exists. Not updating ", data.domain, " right now")
     return nil
+  end
+
+  if not AUTOSSL.is_domain_whitelisted(data.domain, true) then
+    return "cert update is not allowed for domain " .. data.domain
   end
 
   -- Note that we lock regardless of key types
@@ -293,7 +304,7 @@ function AUTOSSL.check_renew()
       })
 
       if err then
-        log(ngx_ERR, "failed to renew certificate for domain ", domain)
+        log(ngx_ERR, "failed to renew certificate for domain ", domain, " error: ", err)
       else
         log(ngx_INFO, "successfully renewed ", deserialized.type, " cert for domain ", domain)
       end
@@ -318,6 +329,9 @@ function AUTOSSL.init(autossl_config, acme_config)
     autossl_config.storage_adapter = "resty.acme.storage." .. autossl_config.storage_adapter
   end
 
+  acme_config.storage_adapter = autossl_config.storage_adapter
+  acme_config.storage_config = autossl_config.storage_config
+
   if autossl_config.account_key_path then
     acme_config.account_key = AUTOSSL.load_account_key(autossl_config.account_key_path)
   else
@@ -331,6 +345,11 @@ function AUTOSSL.init(autossl_config, acme_config)
   end
   acme_config.account_email = autossl_config.account_email
   acme_config.enabled_challenge_handlers = autossl_config.enabled_challenge_handlers
+
+  acme_config.challenge_start_callback = function()
+    ngx.sleep(autossl_config.challenge_start_delay)
+    return true
+  end
 
   -- cache in global variable
   domain_key_types = autossl_config.domain_key_types
@@ -366,11 +385,11 @@ function AUTOSSL.init(autossl_config, acme_config)
     if autossl_config.domain_key_paths[typ] then
       local domain_key_f, err = io.open(autossl_config.domain_key_paths[typ])
       if err then
-        error(err)
+        error("failed to open domain_key: " .. err)
       end
       local domain_key_pem, err = domain_key_f:read("*a")
       if err then
-        error(err)
+        error("failed to read domain key: " .. err)
       end
       domain_key_f:close()
       -- sanity check of the pem content, will error out if it's invalid
@@ -384,7 +403,7 @@ function AUTOSSL.init(autossl_config, acme_config)
   local client, err = acme.new(acme_config)
 
   if err then
-    error(err)
+    error("failed to initialize ACME client: " .. err)
   end
 
   AUTOSSL.client = client
@@ -397,16 +416,16 @@ function AUTOSSL.init_worker()
   local storagemod = require(AUTOSSL.config.storage_adapter)
   local storage, err = storagemod.new(AUTOSSL.config.storage_config)
   if err then
-    error(err)
+    error("failed to initialize storage: " .. err)
   end
   AUTOSSL.storage = storage
 
   if not AUTOSSL.config.account_key_path then
     local account_key, err = AUTOSSL.load_account_key_storage()
     if err then
-      error(err)
+      error("failed to load account key from storage: " .. err)
     end
-    local ok, err = AUTOSSL.client:set_account_key(account_key)
+    local _, err = AUTOSSL.client:set_account_key(account_key)
     if err then
       error("failed to set account key: " .. err)
     end
@@ -423,6 +442,15 @@ function AUTOSSL.serve_tls_alpn_challenge()
   AUTOSSL.client:serve_tls_alpn_challenge()
 end
 
+function AUTOSSL.is_domain_whitelisted(domain, is_new_cert_needed)
+  if domain_whitelist_callback then
+    return domain_whitelist_callback(domain, is_new_cert_needed)
+  elseif domain_whitelist then
+    return domain_whitelist[domain]
+  else
+    return true
+  end
+end
 
 function AUTOSSL.ssl_certificate()
   local domain, err = ssl.server_name()
@@ -434,10 +462,7 @@ function AUTOSSL.ssl_certificate()
 
   domain = string.lower(domain)
 
-  if domain_whitelist_callback and not domain_whitelist_callback(domain) then
-    log(ngx_INFO, "domain ", domain, " does not pass whitelist_callback, skipping")
-    return
-  elseif domain_whitelist and not domain_whitelist[domain] then
+  if not AUTOSSL.is_domain_whitelisted(domain, false) then
     log(ngx_INFO, "domain ", domain, " not in whitelist, skipping")
     return
   end
@@ -446,7 +471,7 @@ function AUTOSSL.ssl_certificate()
   local chains_set = {}
 
   for i, typ in ipairs(domain_key_types) do
-    local certkey, err = get_certkey({ domain = domain, type = typ })
+    local certkey, err = get_certkey_parsed(domain, typ)
     if err then
       log(ngx_ERR, "can't read key and cert from storage ", err)
     elseif certkey == null then
@@ -529,11 +554,7 @@ function AUTOSSL.get_certkey(domain, typ)
     error("domain must be a string")
   end
 
-  return get_certkey({
-    typ = typ or "rsa",
-    domain = domain,
-    raw = true,
-  })
+  return get_certkey(domain, typ or "rsa")
 end
 
 return AUTOSSL

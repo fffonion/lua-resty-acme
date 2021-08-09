@@ -106,3 +106,31 @@ __DATA__
 "commonName.+dns1.com.+id-ecPublicKey.+prime.+301E8208646E73312E636F6D8208646E73322E636F6D8208646E73332E636F6D"
 --- no_error_log
 [error]
+
+
+=== TEST 4: Checks root cert issuer CN correctly
+--- http_config eval: $::HttpConfig
+--- config
+    location =/t {
+        content_by_lua_block {
+            local f = io.open("t/fixtures/multiple_certs.pem")
+            local p = f:read("*a")
+            f:close()
+            local util = require("resty.acme.util")
+            local ok, err = util.check_chain_root_issuer("", "me")
+            ngx.say(ok, err)
+            local ok, err = util.check_chain_root_issuer(p, "me")
+            ngx.say(ok, err)
+            local ok, err = util.check_chain_root_issuer(p, "test.com")
+            ngx.say(ok, err)
+        }
+    }
+--- request
+    GET /t
+--- response_body eval
+"falsecert not found in PEM chain
+falsecurrent chain root issuer common name is \"test.com\"
+truenil
+"
+--- no_error_log
+[error]

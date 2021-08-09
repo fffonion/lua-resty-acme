@@ -43,7 +43,7 @@ local function create_csr(domain_pkey, ...)
     return nil, "failed to add subject name: " .. err
   end
 
-  local alt, ok, err
+  local alt, err
   -- add subject name to altname as well, some implementaions
   -- like ZeroSSL requires that
   if #{...} > 0 then
@@ -97,10 +97,54 @@ local function create_pkey(bits, typ, curve)
   return pkey:to_PEM('private')
 end
 
+local pem_cert_header = "-----BEGIN CERTIFICATE-----"
+local pem_cert_footer = "-----END CERTIFICATE-----"
+local function check_chain_root_issuer(chain_pem, issuer_name)
+  -- we find the last pem cert block in the chain file
+  local pos = 0
+  local pem
+  while true do
+    local newpos = chain_pem:find(pem_cert_header, pos + 1, true)
+    if not newpos then
+      local endpos = chain_pem:find(pem_cert_footer, pos+1, true)
+      if endpos then
+        pem = chain_pem:sub(pos, endpos+#pem_cert_footer-1)
+      end
+      break
+    end
+    pos = newpos
+  end
+
+  if pem then
+    local cert, err = openssl.x509.new(pem)
+    if err then
+        return false, err
+    end
+    local name, err = cert:get_issuer_name()
+    if err then
+        return false, err
+    end
+    local cn,_, err = name:find("CN")
+    if err then
+        return false, err
+    end
+    if cn then
+      if cn.blob == issuer_name then
+        return true
+      else
+        return false, "current chain root issuer common name is \"" .. cn.blob .. "\""
+      end
+    end
+  end
+
+  return false, "cert not found in PEM chain"
+end
+
 return {
     encode_base64url = encode_base64url,
     decode_base64url = decode_base64url,
     thumbprint = thumbprint,
     create_csr = create_csr,
     create_pkey = create_pkey,
+    check_chain_root_issuer = check_chain_root_issuer,
 }

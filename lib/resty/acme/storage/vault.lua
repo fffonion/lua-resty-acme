@@ -3,6 +3,7 @@ local cjson = require "cjson.safe"
 
 local _M = {}
 local mt = {__index = _M}
+local auth
 
 local function valid_vault_key(key)
   local newstr, _ = ngx.re.gsub(key, [=[[/]]=], "-")
@@ -37,6 +38,10 @@ function _M.new(conf)
     {
       host = conf.host or "127.0.0.1",
       port = conf.port or 8200,
+      auth_method = string.lower(conf.auth_method or "token"),
+      auth_path = conf.auth_path or "kubernetes",
+      auth_role = conf.auth_role,
+      jwt_path = conf.jwt_path or "/var/run/secrets/kubernetes.io/serviceaccount/token",
       https = conf.https,
       tls_verify = tls_verify,
       tls_server_name = conf.tls_server_name,
@@ -47,9 +52,16 @@ function _M.new(conf)
     mt
   )
 
+  local token, err = auth(self, conf)
+
+  if err then
+    return nil, err
+  end
+
   self.headers = {
-    ["X-Vault-Token"] = conf.token,
+    ["X-Vault-Token"] = token
   }
+
   if self.https then
     if not self.tls_server_name then
       self.tls_server_name = self.host
@@ -60,14 +72,14 @@ function _M.new(conf)
 end
 
 local function api(self, method, uri, payload)
-  local ok, err
+  local _, err
   -- vault don't keepalive, we create a new instance for every request
   local client = http:new()
   client:set_timeout(self.timeout)
 
   local payload = payload and cjson.encode(payload)
 
-  ok, err = client:connect(self.host, self.port)
+  _, err = client:connect(self.host, self.port)
   if err then
     return nil, err
   end
@@ -112,6 +124,38 @@ local function api(self, method, uri, payload)
   end
 
   return decoded, err
+end
+
+function auth(self, conf)
+  if self.auth_method == "token" then
+    return conf.token, nil
+  elseif self.auth_method ~= "kubernetes" then
+    return nil, "Unknown authentication method"
+  end
+
+  local file, err = io.open(self.jwt_path, "r")
+
+  if err then 
+    return nil, err
+  end
+
+  local token = file:read("*all")
+  file:close()
+
+  local response, err = api(self, "POST", "/v1/auth/" .. self.auth_path .. "/login", {
+    role = self.auth_role,
+    jwt = token
+  })
+
+  if err then 
+    return nil, err
+  end
+
+  if not response["auth"] or not response["auth"]["client_token"] then
+    return nil, "Could not authenticate"  
+  end
+
+  return response["auth"]["client_token"]
 end
 
 local function set_cas(self, k, v, cas, ttl)
@@ -210,7 +254,7 @@ function _M:list(prefix)
   local ret = {}
   local prefix_length = #prefix
   for _, key in ipairs(res['data']['keys']) do
-    local key, err = ngx.re.match(key, [[([^/]+)$]], "jo")
+    local key, _ = ngx.re.match(key, [[([^/]+)$]], "jo")
     if key then
       key = key[1]
       if key:sub(1, prefix_length) == prefix then
