@@ -74,6 +74,7 @@ local failure_cooloff_callback
 local certs_cache = {}
 local CERTS_CACHE_TTL = 3600
 local CERTS_CACHE_NEG_TTL = 5
+local CERTS_LOCK_TTL = 300
 
 
 local update_cert_lock_key_prefix = "update_lock:"
@@ -244,7 +245,7 @@ function AUTOSSL.update_cert(data)
   -- you submit an order with different CSR while the previous order is still pending
   -- you will get the previous order (with `expires` capped to an integer second).
   local lock_key = update_cert_lock_key_prefix .. ":" .. data.domain
-  local err = AUTOSSL.storage:add(lock_key, "1", CERTS_CACHE_NEG_TTL)
+  local err = AUTOSSL.storage:add(lock_key, "1", CERTS_LOCK_TTL)
   if err then
     ngx.log(ngx.INFO,
       "update is already running (lock key ", lock_key, " exists), current type ", data.type)
