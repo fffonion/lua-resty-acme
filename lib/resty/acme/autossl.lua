@@ -226,7 +226,7 @@ function AUTOSSL.update_cert(data)
 
   -- If its failed in the past and its still cooling down
   -- we dont do anything right now
-  local failure_lock_key = certificate_failure_lock_key_prefix .. ":" .. data.domain
+  local failure_lock_key = certificate_failure_lock_key_prefix .. data.domain
   local failure_lock, _ = AUTOSSL.storage:get(failure_lock_key)
   if failure_lock then
     ngx.log(ngx.INFO, "failure lock key exists. Not updating ", data.domain, " right now")
@@ -251,7 +251,7 @@ function AUTOSSL.update_cert(data)
 
   err = update_cert_handler(data)
 
-  local failure_count_key = certificate_failure_count_prefix .. ":" .. data.domain
+  local failure_count_key = certificate_failure_count_prefix .. data.domain
   if err then
     local count_storage, _ = AUTOSSL.storage:get(failure_count_key)
     local count = (count_storage or 0) + 1
