@@ -229,7 +229,9 @@ function AUTOSSL.update_cert(data)
   local failure_lock_key = certificate_failure_lock_key_prefix .. data.domain
   local failure_lock, _ = AUTOSSL.storage:get(failure_lock_key)
   if failure_lock then
-    ngx.log(ngx.INFO, "failure lock key exists. Not updating ", data.domain, " right now")
+    local now = ngx.now()
+    local remaining = failure_lock - now
+    ngx.log(ngx.INFO, "failure lock key exists for another ", remaining, " seconds. Not updating ", data.domain, " right now")
     return nil
   end
 
@@ -256,13 +258,12 @@ function AUTOSSL.update_cert(data)
     local count_storage, _ = AUTOSSL.storage:get(failure_count_key)
     local count = (count_storage or 0) + 1
     AUTOSSL.storage:set(failure_count_key, count)
-
+    local cooloff = AUTOSSL.config.failure_cooloff
     if failure_cooloff_callback then
-      local cooloff = failure_cooloff_callback(domain, count)
-      AUTOSSL.storage:add(failure_lock_key, "1", cooloff)
-    else
-      AUTOSSL.storage:add(failure_lock_key, "1", AUTOSSL.config.failure_cooloff)
+      cooloff = failure_cooloff_callback(domain, count)
     end
+    local now = ngx.now()
+    AUTOSSL.storage:add(failure_lock_key, now + cooloff, cooloff)
   else
     AUTOSSL.storage:set(failure_count_key, 0)
   end
