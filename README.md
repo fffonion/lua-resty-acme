@@ -15,6 +15,7 @@ Table of Contents
 - [Status](#status)
 - [Synopsis](#synopsis)
 - [TODO](#todo)
+- [Testing](#testing)
 - [Copyright and License](#copyright-and-license)
 - [See Also](#see-also)
 
@@ -669,6 +670,15 @@ It can be manually installed with `opm install api7/lua-resty-etcd` or `luarocks
 TODO
 ====
 - autossl: ocsp staping
+
+[Back to TOC](#table-of-contents)
+
+
+Testing
+====
+Setup e2e test environment by running `bash t/prepare_env.sh`.
+
+Then run `cpanm install Test::Nginx::Socket` and then `prove -r t`.
 
 [Back to TOC](#table-of-contents)
 
