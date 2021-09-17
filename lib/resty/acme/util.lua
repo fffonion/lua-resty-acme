@@ -1,3 +1,6 @@
+local reverse = string.reverse
+local find = string.find
+local sub = string.sub
 local openssl = require("resty.acme.openssl")
 
 -- https://tools.ietf.org/html/rfc8555 Page 10
@@ -14,6 +17,7 @@ local encode_base64url = base64.encode_base64url
 --     return ngx.encode_base64(s):gsub("/", "_"):gsub("+", "-"):gsub("[= ]", "")
 --   end
 local decode_base64url = base64.decode_base64url
+local errlog = require("ngx.errlog")
 
 -- https://tools.ietf.org/html/rfc7638
 local function thumbprint(pkey)
@@ -140,6 +144,35 @@ local function check_chain_root_issuer(chain_pem, issuer_name)
   return false, "cert not found in PEM chain"
 end
 
+local function log(lvl, ...)
+  -- log to error logs with our custom prefix, stack level
+  -- and separator
+  local n = select("#", ...)
+  local t = { ... }
+  local info = debug.getinfo(2, "Sl")
+
+  -- kong: kong/pdk/log
+  local short_src = info.short_src
+  if short_src then
+    local rev_src = reverse(short_src)
+    local idx = find(rev_src, "/", nil, true)
+    if idx then
+      short_src = sub(short_src, #rev_src - idx + 2)
+    end
+  end
+
+  local prefix = string.format("[acme] %s:%d: ", short_src, info.currentline)
+  local buf = { prefix }
+
+  for i = 1, n do
+    buf[i + 1] = tostring(t[i])
+  end
+
+  local msg = table.concat(buf, "")
+
+  errlog.raw_log(lvl, msg)
+end
+
 return {
     encode_base64url = encode_base64url,
     decode_base64url = decode_base64url,
@@ -147,4 +180,5 @@ return {
     create_csr = create_csr,
     create_pkey = create_pkey,
     check_chain_root_issuer = check_chain_root_issuer,
+    log = log,
 }

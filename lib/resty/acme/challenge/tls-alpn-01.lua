@@ -1,5 +1,7 @@
 local ffi = require("ffi")
 local ssl = require "ngx.ssl"
+local util = require "resty.acme.util"
+local log = util.log
 
 local pkey = require("resty.openssl.pkey")
 local digest = require("resty.openssl.digest")
@@ -46,7 +48,7 @@ end)
 local function inject_tls_alpn()
   local ssl_ctx, err = ssl_ctx.from_request()
   if err then
-    ngx.log(ngx.WARN, "inject_tls_alpn: ", err)
+    log(ngx.WARN, "inject_tls_alpn: ", err)
     return
   end
   ffi.C.SSL_CTX_set_alpn_select_cb(ssl_ctx.ctx, alpn_select_cb, nil)
@@ -99,12 +101,12 @@ local function serve_challenge_cert(self)
   local domain = assert(ssl.server_name())
   local challenge, err = self.storage:get(ch_key(domain))
   if err then
-    ngx.log(ngx.ERR, "error getting challenge response from storage ", err)
+    log(ngx.ERR, "error getting challenge response from storage ", err)
     ngx.exit(500)
   end
 
   if not challenge then
-    ngx.log(ngx.WARN, "no corresponding response found for ", domain)
+    log(ngx.WARN, "no corresponding response found for ", domain)
     ngx.exit(404)
   end
 
@@ -112,7 +114,7 @@ local function serve_challenge_cert(self)
   -- 0x04: OCTET STRING
   -- 0x20: length
   dgst = "DER:0420" .. dgst:gsub("(.)", function(s) return string.format("%02x", string.byte(s)) end)
-  ngx.log(ngx.DEBUG, "token: ", challenge, ", digest: ", dgst)
+  log(ngx.DEBUG, "token: ", challenge, ", digest: ", dgst)
 
   local key = pkey.new()
   local cert = x509.new()
@@ -135,12 +137,12 @@ local function serve_challenge_cert(self)
   assert(ssl.set_cert(cert_ct))
   assert(ssl.set_priv_key(key_ct))
 
-  ngx.log(ngx.DEBUG, "served tls-alpn challenge")
+  log(ngx.DEBUG, "served tls-alpn challenge")
 end
 
 function _M:serve_challenge()
   if ngx.config.subsystem ~= "stream" then
-    ngx.log(ngx.ERR, "tls-apln-01 challenge can't be used in ", ngx.config.subsystem, " subsystem")
+    log(ngx.ERR, "tls-apln-01 challenge can't be used in ", ngx.config.subsystem, " subsystem")
     ngx.exit(500)
   end
 
@@ -150,7 +152,7 @@ function _M:serve_challenge()
       serve_challenge_cert(self)
     end
   else
-    ngx.log(ngx.ERR, "tls-apln-01 challenge don't know what to do in ", phase, " phase")
+    log(ngx.ERR, "tls-apln-01 challenge don't know what to do in ", phase, " phase")
     ngx.exit(500)
   end
 end

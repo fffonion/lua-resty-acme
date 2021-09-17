@@ -5,7 +5,7 @@ local openssl = require "resty.acme.openssl"
 local json = require "cjson"
 local ssl = require "ngx.ssl"
 
-local log = ngx.log
+local log = util.log
 local ngx_ERR = ngx.ERR
 local ngx_WARN = ngx.WARN
 local ngx_INFO = ngx.INFO
@@ -228,7 +228,7 @@ function AUTOSSL.update_cert(data)
   local lock_key = update_cert_lock_key_prefix .. ":" .. data.domain
   local err = AUTOSSL.storage:add(lock_key, "1", CERTS_LOCK_TTL)
   if err then
-    ngx.log(ngx.INFO,
+    log(ngx.INFO,
       "update is already running (lock key ", lock_key, " exists), current type ", data.type)
     return nil
   end
@@ -335,7 +335,7 @@ function AUTOSSL.init(autossl_config, acme_config)
   end
 
   if not domain_whitelist and not domain_whitelist_callback then
-    ngx.log(ngx.WARN, "neither domain_whitelist or domain_whitelist_callback is defined, this may cause",
+    log(ngx.WARN, "neither domain_whitelist or domain_whitelist_callback is defined, this may cause",
                       "security issues as all SNI will trigger a creation of certificate")
   end
 

@@ -1,3 +1,6 @@
+local util = require "resty.acme.util"
+local log = util.log
+
 local _M = {}
 local mt = {__index = _M}
 
@@ -25,7 +28,7 @@ end
 
 function _M:serve_challenge()
   if ngx.config.subsystem ~= "http" then
-    ngx.log(ngx.ERR, "http-01 challenge can't be used in ", ngx.config.subsystem, " subsystem")
+    log(ngx.ERR, "http-01 challenge can't be used in ", ngx.config.subsystem, " subsystem")
     ngx.exit(500)
   end
 
@@ -33,23 +36,23 @@ function _M:serve_challenge()
     ngx.re.match(ngx.var.request_uri, [[\.well-known/]] .. self.uri_prefix .. "/(.+)", "jo")
 
   if err or not captures or not captures[1] then
-    ngx.log(ngx.ERR, "error extracting token from request_uri ", err)
+    log(ngx.ERR, "error extracting token from request_uri ", err)
     ngx.exit(400)
   end
 
   local token = captures[1]
 
-  ngx.log(ngx.DEBUG, "token is ", token)
+  log(ngx.DEBUG, "token is ", token)
 
   local value, err = self.storage:get(ch_key(token))
 
   if err then
-    ngx.log(ngx.ERR, "error getting challenge response from storage ", err)
+    log(ngx.ERR, "error getting challenge response from storage ", err)
     ngx.exit(500)
   end
 
   if not value then
-    ngx.log(ngx.WARN, "no corresponding response found for ", token)
+    log(ngx.WARN, "no corresponding response found for ", token)
     ngx.exit(404)
   end
 
