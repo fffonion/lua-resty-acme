@@ -13,11 +13,12 @@ jobs:
 
     strategy:
       matrix:
-        nginx: ["1.17.8", "1.19.3"]
-        openssl: ["1.1.1j"]
+        nginx: ["1.19.3", "1.19.9"]
+        openssl: ["1.1.1k"]
         include:
-        - nginx: "1.15.8"
+        - nginx: "1.17.8"
           openssl: "1.0.2u"
+          lua_nginx_module: ""
 
     env:
       JOBS: 3
@@ -65,22 +66,9 @@ jobs:
           /home/runner/work/cache
         key: ${{ runner.os }}-${{ hashFiles('**/tests.yml') }}-nginx-${{ matrix.nginx }}-openssl-${{ matrix.openssl }}
 
-    - name: Yolo start docker containers
+    - name: Prepare environment
       run: |
-        docker run -d -e CONSUL_CLIENT_INTERFACE='eth0' -e CONSUL_BIND_INTERFACE='eth0' -p 127.0.0.1:8500:8500 consul agent -server -bootstrap-expect=1
-        openssl req -x509 -newkey rsa:4096 -keyout /tmp/key.pem -out /tmp/cert.pem -days 1 -nodes -subj '/CN=some.vault'
-        chmod 777 /tmp/key.pem /tmp/cert.pem
-        docker run -d --user root --cap-add=IPC_LOCK -e VAULT_DEV_ROOT_TOKEN_ID=root --name=vault -e 'VAULT_LOCAL_CONFIG={"listener":{"tcp":{"tls_key_file":"/tmp/key.pem","tls_cert_file":"/tmp/cert.pem","address":"0.0.0.0:8210"}}}' -v /tmp/key.pem:/tmp/key.pem -v /tmp/cert.pem:/tmp/cert.pem -p 127.0.0.1:8200:8200 -p 127.0.0.1:8210:8210 vault server -dev
-        docker logs vault
-        docker run -d -v /usr/share/ca-certificates/:/etc/ssl/certs -p 4001:4001 -p 2380:2380 -p 2379:2379  --name etcd quay.io/coreos/etcd:v2.3.8  -name etcd0  -advertise-client-urls http://${HostIP}:2379,http://${HostIP}:4001  -listen-client-urls http://0.0.0.0:2379,http://0.0.0.0:4001  -initial-advertise-peer-urls http://${HostIP}:2380  -listen-peer-urls http://0.0.0.0:2380  -initial-cluster-token etcd-cluster-1  -initial-cluster etcd0=http://${HostIP}:2380  -initial-cluster-state new
-        docker logs etcd
-        
-    - name: Prepare vault for JWT auth
-      run: |
-        curl 'https://localhost:8210/v1/sys/auth/kubernetes.test' -k -X POST -H 'X-Vault-Token: root' -H 'Content-Type: application/json; charset=utf-8' --data-raw '{"path":"kubernetes.test","type":"jwt","config":{}}'
-        curl 'https://localhost:8210/v1/auth/kubernetes.test/config' -k -X PUT -H 'X-Vault-Token: root' -H 'content-type: application/json; charset=utf-8' --data-raw '{"jwt_validation_pubkeys":["-----BEGIN PUBLIC KEY-----\nMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAtMCbmrsltFKqStOoxl8V\nK5ZlrIMb8d+W62yoXW1DKdg+cPNq0vGD94cxl9NjjRzlSR/NVZq6Q34c1lkbenPw\nf3CYfmbQupOKTJKhBdn9sFCCbW0gi6gQv0BaU3Pa8iGfVcZPctAtdbwmNKVd26hW\nmvnoJYhyewhY+j3ooLdnmh55cZU9w1VO0PaSf2zGSmCUeIao77jWcnkEauK2RrYv\nq5yB6w54Q71+lp2jZil9e4IJP/WqcS1CtmKgiWLoZuWNJXDWaa8LbcgQfsxudn3X\nsgHaYnAdZJOaCsDS/ablKmUOLIiI3TBM6dkUlBUMK9OgAsu+wBdX521rK3u+NNVX\n3wIDAQAB\n-----END PUBLIC KEY-----"],"default_role":"root","namespace_in_state":false,"provider_config":{}}'
-        curl 'https://localhost:8210/v1/auth/kubernetes.test/role/root' -k -X POST -H 'X-Vault-Token: root' -H 'content-type: application/json; charset=utf-8' --data-raw '{"token_policies":["acme"],"role_type":"jwt","user_claim":"kubernetes.io/serviceaccount/service-account.uid","bound_subject":"system:serviceaccount:kong:gateway-kong"}'
-        curl 'https://localhost:8210/v1/sys/policies/acl/acme' -k -X PUT -H 'X-Vault-Token: root' -H 'Content-Type: application/json; charset=utf-8' --data-raw '{"name":"acme","policy":"path \"secret/*\" {\n  capabilities = [\"create\", \"read\", \"update\", \"delete\"]\n}"}'
+        bash t/prepare_env.sh
 
     - name: Setup tools
       run: |
@@ -144,16 +132,9 @@ jobs:
         ldd `which nginx`|grep -E 'luajit|ssl|pcre'
 
     - name: Run Tests
-      env:
-        FRP_SERVER_HOST: ${{ secrets.FRP_SERVER_HOST }}
-        FRP_SERVER_PORT: ${{ secrets.FRP_SERVER_PORT }}
-        FRP_TOKEN: ${{ secrets.FRP_TOKEN }}
       run: |
         export LD_LIBRARY_PATH=$LUAJIT_LIB:$LD_LIBRARY_PATH
         export PATH=$BASE_PATH/work/nginx/sbin:$PATH
-        export SUBDOMAIN=acme-ci-$(date +%s%N)
-        # TEST_NGINX_PORT by Test::Nginx seems not working properly?
-        export NGINX_PORT=61984
-        CACHE_DIR=/home/runner/work/cache bash t/prepare_travis.sh
+
         TEST_NGINX_TIMEOUT=60 prove -j$JOBS -r t/
        
