@@ -6,7 +6,7 @@ local openssl = require("resty.acme.openssl")
 local encode_base64url = util.encode_base64url
 local decode_base64url = util.decode_base64url
 
-local log = ngx.log
+local log = util.log
 local ngx_ERR = ngx.ERR
 local ngx_INFO = ngx.INFO
 local ngx_DEBUG = ngx.DEBUG

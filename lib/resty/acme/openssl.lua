@@ -2,7 +2,7 @@ local ok, ret = pcall(require, "resty.openssl")
 
 if ok then
   local version = require("resty.openssl.version")
-  ngx.log(ngx.INFO, "using ffi, OpenSSL version linked: ", string.format("%x", version.version_num))
+  ngx.log(ngx.DEBUG, "[acme] using ffi, OpenSSL version linked: ", string.format("%x", version.version_num))
 
   return {
     pkey = require("resty.openssl.pkey"),
@@ -15,11 +15,11 @@ if ok then
   }
 end
 
-ngx.log(ngx.INFO, "resty.openssl doesn't load: ", ret)
+ngx.log(ngx.INFO, "[acme] resty.openssl doesn't load: ", ret)
 
 local ok, _ = pcall(require, "openssl.pkey")
 if ok then
-  ngx.log(ngx.INFO, "using luaossl")
+  ngx.log(ngx.DEBUG, "[acme] using luaossl")
   local tb = {
     pkey = require("openssl.pkey"),
     x509 = require("openssl.x509"),
