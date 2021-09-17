@@ -2,29 +2,20 @@
 ## [Unreleased]
 
 
+<a name="0.7.2"></a>
+## [0.7.2] - 2021-09-18
+### bug fixes
+- ***:** use a standarlized log interface [0ff01bd](https://github.com/fffonion/lua-resty-acme/commit/0ff01bd2ab39ff3973106946644223d1740a31b8)
+- **autossl:** release update_lock after cert is created to allow multiple type of certs for same domain to be created within short time [e315070](https://github.com/fffonion/lua-resty-acme/commit/e315070834a6c5b516110d61bb12bb9052f896a8)
+- **autossl:** increase cert lock time ([#47](https://github.com/fffonion/lua-resty-acme/issues/47)) [efb0602](https://github.com/fffonion/lua-resty-acme/commit/efb0602ab286f93f25d6f98d9ec26521970f743b)
+- **tls-alpn-01:** set version 3 in certificate generated ([#49](https://github.com/fffonion/lua-resty-acme/issues/49)) [887cad8](https://github.com/fffonion/lua-resty-acme/commit/887cad8b2ee02748c863f85e8f8afdec3ca897bf)
+
+
 <a name="0.7.1"></a>
 ## [0.7.1] - 2021-07-22
-### bug fixes
-- ***:** popup errors from lower functions [a19e9c8](https://github.com/fffonion/lua-resty-acme/commit/a19e9c8af9179a81815c653d176aa0bfc27e532b)
-- **autossl:** pass storage config to acme client ([#43](https://github.com/fffonion/lua-resty-acme/issues/43)) [ef1e541](https://github.com/fffonion/lua-resty-acme/commit/ef1e54112d1bdda187812a0e6c96d8b134fd4d04)
-
 ### features
 - **autossl:** add challenge_start_delay [df4ba0b](https://github.com/fffonion/lua-resty-acme/commit/df4ba0b71a1f92b87d7f9f203475bc7115c56b9a)
-- **autossl:** check if domain is whitelisted before cert renewal ([#35](https://github.com/fffonion/lua-resty-acme/issues/35)) [942c007](https://github.com/fffonion/lua-resty-acme/commit/942c007711ba1a0f04b8f30f81443a46ae0ed412)
 - **client:** add challenge_start_callback [1c9b2d5](https://github.com/fffonion/lua-resty-acme/commit/1c9b2d5a03eb644cc0770ec54e4d711bc03cdd42)
-- **client:** allow to read "alternate" link and select preferred chain ([#42](https://github.com/fffonion/lua-resty-acme/issues/42)) [ff17a74](https://github.com/fffonion/lua-resty-acme/commit/ff17a741d36f2058a21621c9191fda8513cb2c73)
-- **storage/vault:** add support for kubernetes auth ([#37](https://github.com/fffonion/lua-resty-acme/issues/37)) [93c2121](https://github.com/fffonion/lua-resty-acme/commit/93c212132a5d28b93269675c63a88a4e452001dc)
-
-
-<a name="0.6.2"></a>
-## [0.6.2] - 2021-07-22
-### bug fixes
-- ***:** popup errors from lower functions [4e25b4d](https://github.com/fffonion/lua-resty-acme/commit/4e25b4dc4b10a77594546eaaceefe0418c91c3b7)
-- **autossl:** pass storage config to acme client ([#43](https://github.com/fffonion/lua-resty-acme/issues/43)) [102312f](https://github.com/fffonion/lua-resty-acme/commit/102312f51711ad0a5d12a30909fbb76134f973bd)
-
-### features
-- **autossl:** add challenge_start_delay [abc2e2e](https://github.com/fffonion/lua-resty-acme/commit/abc2e2eab2eb1220096163f84fdeee09df193db4)
-- **client:** add challenge_start_callback [2dc8df7](https://github.com/fffonion/lua-resty-acme/commit/2dc8df782b95d593dfbdea2186d2b8ab5d6af6be)
 
 
 <a name="0.7.0"></a>
@@ -37,6 +28,13 @@
 - **autossl:** check if domain is whitelisted before cert renewal ([#35](https://github.com/fffonion/lua-resty-acme/issues/35)) [942c007](https://github.com/fffonion/lua-resty-acme/commit/942c007711ba1a0f04b8f30f81443a46ae0ed412)
 - **client:** allow to read "alternate" link and select preferred chain ([#42](https://github.com/fffonion/lua-resty-acme/issues/42)) [ff17a74](https://github.com/fffonion/lua-resty-acme/commit/ff17a741d36f2058a21621c9191fda8513cb2c73)
 - **storage/vault:** add support for kubernetes auth ([#37](https://github.com/fffonion/lua-resty-acme/issues/37)) [93c2121](https://github.com/fffonion/lua-resty-acme/commit/93c212132a5d28b93269675c63a88a4e452001dc)
+
+
+<a name="0.6.2"></a>
+## [0.6.2] - 2021-07-22
+### features
+- **autossl:** add challenge_start_delay [abc2e2e](https://github.com/fffonion/lua-resty-acme/commit/abc2e2eab2eb1220096163f84fdeee09df193db4)
+- **client:** add challenge_start_callback [2dc8df7](https://github.com/fffonion/lua-resty-acme/commit/2dc8df782b95d593dfbdea2186d2b8ab5d6af6be)
 
 
 <a name="0.6.1"></a>
@@ -226,10 +224,11 @@
 - **crypto:** ffi openssl supports generating ec certificates [bc9d989](https://github.com/fffonion/lua-resty-acme/commit/bc9d989b4eb8bfa954f2f1ab08b0449957a27402)
 
 
-[Unreleased]: https://github.com/fffonion/lua-resty-acme/compare/0.7.1...HEAD
-[0.7.1]: https://github.com/fffonion/lua-resty-acme/compare/0.6.2...0.7.1
-[0.6.2]: https://github.com/fffonion/lua-resty-acme/compare/0.7.0...0.6.2
-[0.7.0]: https://github.com/fffonion/lua-resty-acme/compare/0.6.1...0.7.0
+[Unreleased]: https://github.com/fffonion/lua-resty-acme/compare/0.7.2...HEAD
+[0.7.2]: https://github.com/fffonion/lua-resty-acme/compare/0.7.1...0.7.2
+[0.7.1]: https://github.com/fffonion/lua-resty-acme/compare/0.7.0...0.7.1
+[0.7.0]: https://github.com/fffonion/lua-resty-acme/compare/0.6.2...0.7.0
+[0.6.2]: https://github.com/fffonion/lua-resty-acme/compare/0.6.1...0.6.2
 [0.6.1]: https://github.com/fffonion/lua-resty-acme/compare/0.6.0...0.6.1
 [0.6.0]: https://github.com/fffonion/lua-resty-acme/compare/0.5.11...0.6.0
 [0.5.11]: https://github.com/fffonion/lua-resty-acme/compare/0.5.10...0.5.11
