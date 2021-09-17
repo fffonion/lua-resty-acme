@@ -199,6 +199,14 @@ local function update_cert_handler(data)
 
   log(ngx_INFO, "new ", typ, " cert for ", domain, " is saved")
 
+  local lock_key = update_cert_lock_key_prefix .. domain
+  local err = AUTOSSL.storage:delete(lock_key)
+  if err then
+    log(ngx.WARN,
+      "unable to delete lock key ", lock_key, ": ", err,
+      ", certs for other type may be blocked until lock expired")
+  end
+
 end
 
 -- locked wrapper for update_cert_handler
@@ -225,7 +233,7 @@ function AUTOSSL.update_cert(data)
   -- Let's encrypt tends to have a (undocumented?) behaviour that if
   -- you submit an order with different CSR while the previous order is still pending
   -- you will get the previous order (with `expires` capped to an integer second).
-  local lock_key = update_cert_lock_key_prefix .. ":" .. data.domain
+  local lock_key = update_cert_lock_key_prefix .. data.domain
   local err = AUTOSSL.storage:add(lock_key, "1", CERTS_LOCK_TTL)
   if err then
     log(ngx.INFO,
