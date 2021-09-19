@@ -6,6 +6,8 @@ use Cwd qw(cwd);
 
 my $pwd = cwd();
 
+env_to_nginx("TEST_TRY_NONCE_INFINITELY=1");
+
 $ENV{'tm'} = time;
 
 sub ::make_http_config{
