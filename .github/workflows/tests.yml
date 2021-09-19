@@ -13,12 +13,23 @@ jobs:
 
     strategy:
       matrix:
-        nginx: ["1.19.3", "1.19.9"]
-        openssl: ["1.1.1k"]
         include:
+        - nginx: "1.19.9"
+          openssl: "1.1.1k"
+          lua_nginx_module: "v0.10.20"
+          lua_resty_core: "v0.1.22"
         - nginx: "1.17.8"
           openssl: "1.0.2u"
-          lua_nginx_module: ""
+          lua_nginx_module: "v0.10.20"
+          lua_resty_core: "v0.1.22"
+        - nginx: "1.19.3"
+          openssl: "1.1.1k"
+          lua_nginx_module: "v0.10.19"
+          lua_resty_core: "v0.1.21"
+        - nginx: "1.17.8"
+          openssl: "1.1.1k"
+          lua_nginx_module: "v0.10.17"
+          lua_resty_core: "v0.1.19"
 
     env:
       JOBS: 3
@@ -40,8 +51,6 @@ jobs:
   
       NGINX_CC_OPTS: ""
       LUAJIT_CC_OPTS: ""
-      NGINX_VERSION: ${{ matrix.nginx }}
-      OPENSSL_VER: ${{ matrix.openssl }}
 
     services:
       redis:
@@ -82,12 +91,12 @@ jobs:
         git clone https://github.com/openresty/openresty.git ./openresty
         git clone https://github.com/openresty/nginx-devel-utils.git
         git clone https://github.com/simpl/ngx_devel_kit.git ./ndk-nginx-module
-        git clone https://github.com/openresty/lua-nginx-module.git ./lua-nginx-module -b v0.10.17
+        git clone https://github.com/openresty/lua-nginx-module.git ./lua-nginx-module -b ${{ matrix.lua_nginx_module }}
         git clone https://github.com/openresty/no-pool-nginx.git ./no-pool-nginx
         # lua libraries at parent directory of current repository
         popd
         mkdir ../lib
-        git clone https://github.com/openresty/lua-resty-core.git ../lua-resty-core -b v0.1.19
+        git clone https://github.com/openresty/lua-resty-core.git ../lua-resty-core -b ${{ matrix.lua_resty_core }}
         git clone https://github.com/openresty/lua-resty-lrucache.git ../lua-resty-lrucache
         git clone https://github.com/openresty/lua-resty-redis.git ../lua-resty-redis
         git clone -b v0.15 https://github.com/ledgetech/lua-resty-http ../lua-resty-http
@@ -103,7 +112,7 @@ jobs:
     - name: Build OpenSSL
       run: |
         if [ "X$OPENSSL_HASH" != "X" ]; then wget https://github.com/openssl/openssl/archive/$OPENSSL_HASH.tar.gz -O - | tar zxf ; pushd openssl-$OPENSSL_HASH/; fi
-        if [ "X$OPENSSL_HASH" = "X" ] ; then wget https://www.openssl.org/source/openssl-$OPENSSL_VER.tar.gz -O - | tar zxf -; pushd openssl-$OPENSSL_VER/; fi
+        if [ "X$OPENSSL_HASH" = "X" ] ; then wget https://www.openssl.org/source/openssl-${{ matrix.openssl }}.tar.gz -O - | tar zxf -; pushd openssl-${{ matrix.openssl }}/; fi
         if [ ! -e $OPENSSL_PREFIX/include ]; then ./config shared -d --prefix=$OPENSSL_PREFIX -DPURIFY > build.log 2>&1 || (cat build.log && exit 1); fi
         if [ ! -e $OPENSSL_PREFIX/include ]; then make -j$JOBS > build.log 2>&1 || (cat build.log && exit 1); fi
         if [ ! -e $OPENSSL_PREFIX/include ]; then sudo make PATH=$PATH install_sw > build.log 2>&1 || (cat build.log && exit 1); fi
@@ -127,7 +136,7 @@ jobs:
         export PATH=$BASE_PATH/work/nginx/sbin:$BASE_PATH/../nginx-devel-utils:$PATH
         export LD_LIBRARY_PATH=$LUAJIT_LIB:$LD_LIBRARY_PATH
         cd $BASE_PATH
-        if [ ! -e work ]; then ngx-build $NGINX_VERSION --add-module=../ndk-nginx-module --add-module=../lua-nginx-module --with-http_ssl_module --with-cc-opt="-I$OPENSSL_INC $NGINX_CC_OPTS" --with-ld-opt="-L$OPENSSL_LIB -Wl,-rpath,$OPENSSL_LIB" --with-debug > build.log 2>&1 || (cat build.log && exit 1); fi
+        if [ ! -e work ]; then ngx-build ${{ matrix.nginx }} --add-module=../ndk-nginx-module --add-module=../lua-nginx-module --with-http_ssl_module --with-cc-opt="-I$OPENSSL_INC $NGINX_CC_OPTS" --with-ld-opt="-L$OPENSSL_LIB -Wl,-rpath,$OPENSSL_LIB" --with-debug > build.log 2>&1 || (cat build.log && exit 1); fi
         nginx -V
         ldd `which nginx`|grep -E 'luajit|ssl|pcre'
 
