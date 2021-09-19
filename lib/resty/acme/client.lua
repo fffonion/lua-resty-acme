@@ -20,6 +20,8 @@ end
 
 local wait_backoff_series = {1, 1, 2, 3, 5, 8, 13, 21}
 
+local TEST_TRY_NONCE_INFINITELY = not not os.getenv("TEST_TRY_NONCE_INFINITELY")
+
 local _M = {
   _VERSION = '0.7.2'
 }
@@ -313,7 +315,7 @@ function _M:post(url, payload, headers, nonce)
       if not nonce then
         log(ngx_WARN, "bad nonce: recoverable error, retrying")
         return self:post(url, payload, headers, resp.headers["Replay-Nonce"])
-      else
+      elseif not TEST_TRY_NONCE_INFINITELY then
         return nil, nil, "bad nonce: failed again, bailing out"
       end
     else
