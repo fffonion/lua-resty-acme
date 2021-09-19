@@ -676,7 +676,7 @@ TODO
 
 Testing
 ====
-Setup e2e test environment by running `bash t/prepare_env.sh`.
+Setup e2e test environment by running `bash t/fixtures/prepare_env.sh`.
 
 Then run `cpanm install Test::Nginx::Socket` and then `prove -r t`.
 

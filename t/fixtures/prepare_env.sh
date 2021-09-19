@@ -34,5 +34,3 @@ openssl req -newkey rsa:2048 -nodes -keyout /tmp/default.key -x509 -days 365 -ou
 openssl ecparam -name prime256v1 -genkey -out /tmp/default-ecc.key	
 openssl req -new -sha256 -key /tmp/default-ecc.key -subj "/" -out temp.csr	
 openssl x509 -req -sha256 -days 365 -in temp.csr -signkey /tmp/default-ecc.key -out /tmp/default-ecc.pem
-
-cp t/ca/ca-certificates.crt /tmp

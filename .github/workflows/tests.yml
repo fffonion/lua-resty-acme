@@ -68,7 +68,7 @@ jobs:
 
     - name: Prepare environment
       run: |
-        bash t/prepare_env.sh
+        bash t/fixtures/prepare_env.sh
 
     - name: Setup tools
       run: |
