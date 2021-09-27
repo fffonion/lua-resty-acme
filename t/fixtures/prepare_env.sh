@@ -21,7 +21,7 @@ docker-compose up -d
 
 # on macOS use host.docker.internal
 if [[ "$OSTYPE" == 'darwin'* ]]; then
-    host_ip=$(docker run -it --rm alpine ping host.docker.internal -c1|grep -oP "\d+\.\d+\.\d+\.\d+"|head -n1)
+    host_ip=$(docker run -it --rm alpine ping host.docker.internal -c1|grep -oE "\d+\.\d+\.\d+\.\d+"|head -n1)
     # update the default ip in resolver
     curl --request POST --data '{"ip":"'$host_ip'"}' http://localhost:8055/set-default-ipv4
 fi

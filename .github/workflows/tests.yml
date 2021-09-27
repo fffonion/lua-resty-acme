@@ -17,18 +17,22 @@ jobs:
         - nginx: "1.19.9"
           openssl: "1.1.1k"
           lua_nginx_module: "v0.10.20"
+          stream_lua_nginx_module: "v0.0.10"
           lua_resty_core: "v0.1.22"
-        - nginx: "1.17.8"
+        - nginx: "1.19.9"
           openssl: "1.0.2u"
           lua_nginx_module: "v0.10.20"
+          stream_lua_nginx_module: "v0.0.10"
           lua_resty_core: "v0.1.22"
         - nginx: "1.19.3"
           openssl: "1.1.1k"
           lua_nginx_module: "v0.10.19"
+          stream_lua_nginx_module: "v0.0.9"
           lua_resty_core: "v0.1.21"
         - nginx: "1.17.8"
           openssl: "1.1.1k"
           lua_nginx_module: "v0.10.17"
+          stream_lua_nginx_module: "v0.0.8"
           lua_resty_core: "v0.1.19"
 
     env:
@@ -92,6 +96,7 @@ jobs:
         git clone https://github.com/openresty/nginx-devel-utils.git
         git clone https://github.com/simpl/ngx_devel_kit.git ./ndk-nginx-module
         git clone https://github.com/openresty/lua-nginx-module.git ./lua-nginx-module -b ${{ matrix.lua_nginx_module }}
+        git clone https://github.com/openresty/stream-lua-nginx-module.git ./stream-lua-nginx-module -b ${{ matrix.stream_lua_nginx_module }}
         git clone https://github.com/openresty/no-pool-nginx.git ./no-pool-nginx
         # lua libraries at parent directory of current repository
         popd
@@ -136,7 +141,7 @@ jobs:
         export PATH=$BASE_PATH/work/nginx/sbin:$BASE_PATH/../nginx-devel-utils:$PATH
         export LD_LIBRARY_PATH=$LUAJIT_LIB:$LD_LIBRARY_PATH
         cd $BASE_PATH
-        if [ ! -e work ]; then ngx-build ${{ matrix.nginx }} --add-module=../ndk-nginx-module --add-module=../lua-nginx-module --with-http_ssl_module --with-cc-opt="-I$OPENSSL_INC $NGINX_CC_OPTS" --with-ld-opt="-L$OPENSSL_LIB -Wl,-rpath,$OPENSSL_LIB" --with-debug > build.log 2>&1 || (cat build.log && exit 1); fi
+        if [ ! -e work ]; then ngx-build ${{ matrix.nginx }} --add-module=../ndk-nginx-module --add-module=../lua-nginx-module --add-module=../stream-lua-nginx-module --with-http_ssl_module --with-stream --with-stream_ssl_module --with-stream_ssl_preread_module --with-cc-opt="-I$OPENSSL_INC $NGINX_CC_OPTS" --with-ld-opt="-L$OPENSSL_LIB -Wl,-rpath,$OPENSSL_LIB" --with-debug > build.log 2>&1 || (cat build.log && exit 1); fi
         nginx -V
         ldd `which nginx`|grep -E 'luajit|ssl|pcre'
 
