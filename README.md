@@ -316,7 +316,6 @@ kept same as possible.
 - `http` and `stream` subsystem doesn't share shm, thus considering use a storage other
 than `shm`. If you must use `shm`, you will need to apply
 [this patch](https://github.com/fffonion/lua-resty-shdict-server/tree/master/patches).
-- `tls-alpn-01` challenge handler is considered experiemental.
 
 ## resty.acme.autossl
 
