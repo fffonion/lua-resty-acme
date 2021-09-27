@@ -11,12 +11,14 @@ env_to_nginx("TEST_TRY_NONCE_INFINITELY=1");
 $ENV{'tm'} = time;
 
 sub ::make_http_config{
-    my ($key_types, $key_path) = @_;
+    my ($key_types, $key_path, $challenges, $shm_name, $storage) = @_;
+    $shm_name ||= "acme";
+    $storage ||= "shm";
     return qq{
         lua_package_path "$pwd/lib/?.lua;$pwd/lib/?/init.lua;$pwd/../lib/?.lua;$pwd/../lib/?/init.lua;;";
         lua_package_cpath "$pwd/luajit/lib/?.so;/usr/local/openresty-debug/lualib/?.so;/usr/local/openresty/lualib/?.so;;";
 
-        lua_shared_dict acme 16m;
+        lua_shared_dict $shm_name 16m;
 
         init_by_lua_block {
             -- patch localhost to resolve to 127.0.0.1 :facepalm:
@@ -65,6 +67,8 @@ sub ::make_http_config{
                 domain_whitelist = setmetatable({}, { __index = function()
                     return true
                 end}),
+                enabled_challenge_handlers = { $challenges },
+                storage_adapter = "$storage",
                 -- bump up this slightly in test
                 challenge_start_delay = 3,
             }, {
@@ -79,14 +83,48 @@ sub ::make_http_config{
     }
 };
 
+sub ::make_main_config{
+    my ($key_types, $key_path, $challenges) = @_;
+    my $common_config = make_http_config($key_types, $key_path, $challenges, "acme_stream", "file");
+    return qq{
+        stream {
+            $common_config
+
+            map \$ssl_preread_alpn_protocols \$backend {
+                ~\\bacme-tls/1\\b 127.0.0.1:5201;
+                default 127.0.0.1:5101;
+            }
+
+            server {
+                    listen 5001;
+                    ssl_preread on;
+                    proxy_pass \$backend;
+            }
+
+            server {
+                    listen 5201 ssl;
+                    ssl_certificate /tmp/default.pem;
+                    ssl_certificate_key /tmp/default.key;
+
+                    ssl_certificate_by_lua_block {
+                        require("resty.acme.autossl").serve_tls_alpn_challenge()
+                    }
+
+                    content_by_lua_block {
+                        ngx.exit(0)
+                    }
+            }
+        }
+    }
+}
+
 
 run_tests();
 
 __DATA__
-=== TEST 1: Generates CSR with RSA pkey correctly
---- http_config eval: ::make_http_config("'rsa'", "/tmp/account.key")
+=== TEST 1: http-01 challenge
+--- http_config eval: ::make_http_config("'rsa'", "/tmp/account.key", "'http-01'")
 --- config
-    # for use of travis
     listen 5002;
     listen 5001 ssl;
     ssl_certificate /tmp/default.pem;
@@ -134,10 +172,9 @@ __DATA__
 [warn]
 [error]
 
-=== TEST 2: Serve RSA + ECC dual certs
---- http_config eval: ::make_http_config("'rsa', 'ecc'", "/tmp/account.key")
+=== TEST 2: http-01 challenge with RSA + ECC dual certs
+--- http_config eval: ::make_http_config("'rsa', 'ecc'", "/tmp/account.key", "'http-01'")
 --- config
-    # for use of travis
     listen 5002;
     listen 5001 ssl;
     ssl_certificate /tmp/default.pem;
@@ -171,11 +208,11 @@ __DATA__
                     local proc2 = ngx_pipe.spawn({'bash', '-c', "echo q |openssl s_client -host 127.0.0.1 -servername ".. ngx.var.domain .. " -port 5001 -cipher ECDHE-ECDSA-AES128-GCM-SHA256|openssl x509 -noout -text && sleep 0.1"}, opts)
                     local data2, err, partial = proc2:stdout_read_all()
                     ngx.log(ngx.INFO, data, data2)
-                    local f = io.open("/tmp/test2", "w")
+                    local f = io.open("/tmp/test2.1", "w")
                     f:write(data)
                     f:close()
                     if ngx.re.match(data2, ngx.var.domain) then
-                        local f = io.open("/tmp/test3", "w")
+                        local f = io.open("/tmp/test2.2", "w")
                         f:write(data2)
                         f:close()
                         ngx.say(data)
@@ -198,3 +235,48 @@ __DATA__
 [error]
 --- error_log
 set ecc key
+
+=== TEST 3: tls-alpn-01
+--- http_config eval: ::make_http_config("'rsa'", "/tmp/account.key", "'tls-alpn-01'", "acme", "file")
+--- main_config eval: ::make_main_config("'rsa'", "/tmp/account.key", "'tls-alpn-01'")
+--- config
+    listen 5002;
+    listen 5101 ssl;
+    ssl_certificate /tmp/default.pem;
+    ssl_certificate_key /tmp/default.key;
+
+    ssl_certificate_by_lua_block {
+        require("resty.acme.autossl").ssl_certificate()
+    }
+
+    location ~ /t/(.+) {
+        set $domain $1;
+        content_by_lua_block {
+            local ngx_pipe = require "ngx.pipe"
+            local opts = {
+                merge_stderr = true,
+                buffer_size = 256000,
+            }
+            local out
+            for i=0,15,1 do
+                local proc = ngx_pipe.spawn({'bash', '-c', "echo q |openssl s_client -host 127.0.0.1 -servername ".. ngx.var.domain .. " -port 5101|openssl x509 -noout -text && sleep 0.1"}, opts)
+                local data, err, partial = proc:stdout_read_all()
+                if ngx.re.match(data, ngx.var.domain) then
+                    local f = io.open("/tmp/test3", "w")
+                    f:write(data)
+                    f:close()
+                    ngx.say(data)
+                    break
+                end
+                ngx.sleep(2)
+            end
+            ngx.say(out or "timeout")
+        }
+    }
+--- request eval
+"GET /t/e2e-test3-$ENV{'tm'}"
+--- response_body_like eval
+"Pebble Intermediate.+CN\\s*=\\s*e2e-test3.+rsaEncryption"
+--- no_error_log
+[warn]@we allow warn here since we are using plain FFI mode for resty.openssl.ssl
+[error]
