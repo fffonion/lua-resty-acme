@@ -151,4 +151,9 @@ jobs:
         export PATH=$BASE_PATH/work/nginx/sbin:$PATH
 
         TEST_NGINX_TIMEOUT=60 prove -j$JOBS -r t/
-       
+
+    - name: Show logs
+      if: failure()
+      run: |
+        pushd t/fixtures
+        docker-compose logs
