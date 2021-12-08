@@ -1,4 +1,3 @@
-local ffi = require("ffi")
 local ssl = require "ngx.ssl"
 local util = require "resty.acme.util"
 local log = util.log
@@ -32,26 +31,25 @@ local mt = {__index = _M}
 --   return acme_found
 -- end
 
-local acme_protocol_name_wire = '\010acme-tls/1'
+local acme_protocol_only = { 'acme-tls/1' }
 
-local alpn_select_cb = ffi.cast("SSL_CTX_alpn_select_cb_func", function(_, out, outlen, client, client_len)
-  local code = ffi.C.SSL_select_next_proto(
-    ffi.cast("unsigned char **", out), outlen,
-    acme_protocol_name_wire, 10,
-    client, client_len)
-  if code ~= 1 then -- OPENSSL_NPN_NEGOTIATED
-    return 3 -- SSL_TLSEXT_ERR_NOACK
-  end
-  return 0 -- SSL_TLSEXT_ERR_OK
-end)
+local injected = false
 
 local function inject_tls_alpn()
+  if injected then
+    return true
+  end
   local ssl_ctx, err = ssl_ctx.from_request()
   if err then
     log(ngx.WARN, "inject_tls_alpn: ", err)
     return
   end
-  ffi.C.SSL_CTX_set_alpn_select_cb(ssl_ctx.ctx, alpn_select_cb, nil)
+  local _, err = ssl_ctx:set_alpns(acme_protocol_only)
+  if err then
+    log(ngx.WARN, "inject_tls_alpn: ", err)
+    return
+  end
+  injected = true
   return true
 end
 
