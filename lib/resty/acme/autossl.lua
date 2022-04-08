@@ -386,9 +386,9 @@ function AUTOSSL.init(autossl_config, acme_config)
     error("failure_cooloff_callback must be a function, got " .. type(failure_cooloff_callback))
   end
 
-  if not failure_cooloff and not failure_cooloff_callback then
-    ngx.log(ngx.WARN, "neither failure_cooloff or failure_cooloff_callback is defined",
-                      "any certificate failure will not cooloff which may trigger LE API limits")
+  if not autossl_config.failure_cooloff and not failure_cooloff_callback then
+    ngx.log(ngx.WARN, "neither failure_cooloff or failure_cooloff_callback is defined, ",
+                      "any certificate failure will not cooloff which may trigger ACME API limits")
   end
 
   for _, typ in ipairs(domain_key_types) do
