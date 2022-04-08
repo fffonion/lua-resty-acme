@@ -38,6 +38,10 @@ local default_config = {
   domain_whitelist = nil,
   -- restrict registering new cert only with domain checked by this function
   domain_whitelist_callback = nil,
+  -- certificate failure cooloff period, in seconds
+  failure_cooloff = 300,
+  -- certificate failure cooloff function, receives domain name and attempt count, should return cooloff period in seconds
+  failure_cooloff_callback = nil,
   -- the threshold to renew a cert before it expires, in seconds
   renew_threshold = 7 * 86400,
   -- interval to check cert renewal, in seconds
@@ -58,6 +62,7 @@ local domain_pkeys = {}
 
 local domain_key_types, domain_key_types_count
 local domain_whitelist, domain_whitelist_callback
+local failure_cooloff_callback
 
 --[[
   certs_cache = {
@@ -75,6 +80,8 @@ local CERTS_LOCK_TTL = 300
 local update_cert_lock_key_prefix = "update_lock:"
 local domain_cache_key_prefix = "domain:"
 local account_private_key_prefix = "account_key:"
+local certificate_failure_lock_key_prefix = "failure_lock:"
+local certificate_failure_count_prefix = "failed_attempts:"
 
 -- get cert from storage
 local function get_certkey(domain, typ)
@@ -229,6 +236,18 @@ function AUTOSSL.update_cert(data)
     return "cert update is not allowed for domain " .. data.domain
   end
 
+
+  -- If its failed in the past and its still cooling down
+  -- we dont do anything right now
+  local failure_lock_key = certificate_failure_lock_key_prefix .. data.domain
+  local failure_lock, _ = AUTOSSL.storage:get(failure_lock_key)
+  if failure_lock then
+    local now = ngx.now()
+    local remaining = failure_lock - now
+    ngx.log(ngx.INFO, "failure lock key exists for another ", remaining, " seconds. Not updating ", data.domain, " right now")
+    return nil
+  end
+
   -- Note that we lock regardless of key types
   -- Let's encrypt tends to have a (undocumented?) behaviour that if
   -- you submit an order with different CSR while the previous order is still pending
@@ -242,6 +261,21 @@ function AUTOSSL.update_cert(data)
   end
 
   err = update_cert_handler(data)
+
+  local failure_count_key = certificate_failure_count_prefix .. data.domain
+  if err then
+    local count_storage, _ = AUTOSSL.storage:get(failure_count_key)
+    local count = (count_storage or 0) + 1
+    AUTOSSL.storage:set(failure_count_key, count)
+    local cooloff = AUTOSSL.config.failure_cooloff
+    if failure_cooloff_callback then
+      cooloff = failure_cooloff_callback(domain, count)
+    end
+    local now = ngx.now()
+    AUTOSSL.storage:add(failure_lock_key, now + cooloff, cooloff)
+  else
+    AUTOSSL.storage:set(failure_count_key, 0)
+  end
 
   -- yes we don't release lock, but wait it to expire after negative cache is cleared
   return err
@@ -345,6 +379,16 @@ function AUTOSSL.init(autossl_config, acme_config)
   if not domain_whitelist and not domain_whitelist_callback then
     log(ngx.WARN, "neither domain_whitelist or domain_whitelist_callback is defined, this may cause",
                       "security issues as all SNI will trigger a creation of certificate")
+  end
+
+  failure_cooloff_callback = autossl_config.failure_cooloff_callback
+  if failure_cooloff_callback and type(failure_cooloff_callback) ~= "function" then
+    error("failure_cooloff_callback must be a function, got " .. type(failure_cooloff_callback))
+  end
+
+  if not failure_cooloff and not failure_cooloff_callback then
+    ngx.log(ngx.WARN, "neither failure_cooloff or failure_cooloff_callback is defined",
+                      "any certificate failure will not cooloff which may trigger LE API limits")
   end
 
   for _, typ in ipairs(domain_key_types) do
