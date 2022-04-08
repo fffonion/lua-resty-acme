@@ -35,7 +35,7 @@ __DATA__
 --- request
     GET /t
 --- response_body_like eval
-"errors from vault: \\[\"missing client token\"\\]
+"errors from vault: \\[\"(?:missing client token|permission denied)\"\\]
 "
 --- no_error_log
 [error]
