@@ -2,6 +2,16 @@
 ## [Unreleased]
 
 
+<a name="0.8.0"></a>
+## [0.8.0] - 2022-04-08
+### bug fixes
+- **tests:** allow to try infinitely for bad nonce in CI [0170c6d](https://github.com/fffonion/lua-resty-acme/commit/0170c6d2fe29128dfcf29c56b378f7a3dd9319b6)
+- **tls-alpn-01:** delegate resty.ssl to set alpns [c59098b](https://github.com/fffonion/lua-resty-acme/commit/c59098b4686c63171502606985526d8452fdd8a2)
+
+### features
+- **autossl:** add certificate renewal cooloff period ([#59](https://github.com/fffonion/lua-resty-acme/issues/59)) [9255220](https://github.com/fffonion/lua-resty-acme/commit/9255220e17d299604441c442af10d52fd7e8d1d7)
+
+
 <a name="0.7.2"></a>
 ## [0.7.2] - 2021-09-18
 ### bug fixes
@@ -224,7 +234,8 @@
 - **crypto:** ffi openssl supports generating ec certificates [bc9d989](https://github.com/fffonion/lua-resty-acme/commit/bc9d989b4eb8bfa954f2f1ab08b0449957a27402)
 
 
-[Unreleased]: https://github.com/fffonion/lua-resty-acme/compare/0.7.2...HEAD
+[Unreleased]: https://github.com/fffonion/lua-resty-acme/compare/0.8.0...HEAD
+[0.8.0]: https://github.com/fffonion/lua-resty-acme/compare/0.7.2...0.8.0
 [0.7.2]: https://github.com/fffonion/lua-resty-acme/compare/0.7.1...0.7.2
 [0.7.1]: https://github.com/fffonion/lua-resty-acme/compare/0.7.0...0.7.1
 [0.7.0]: https://github.com/fffonion/lua-resty-acme/compare/0.6.2...0.7.0
