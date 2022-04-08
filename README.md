@@ -173,6 +173,26 @@ end}),
 `domain_whitelist_callback` function is provided with a second argument,
 which indicates whether the certificate is about to be served on incoming HTTP request (false) or new certificate is about to be requested (true). This allows to use cached values on hot path (serving requests) while fetching fresh data from storage for new certificates. One may also implement different logic, e.g. do extra checks before requesting new cert.
 
+In case of certificate request failure one may want to prevent ACME client to request another certificate immediatelly. By default, the cooloff period it is set to 300 seconds (5 minutes). It may be customized with `failure_cooloff` or with `failure_cooloff_callback` function, e.g. to implement exponential backoff.
+
+```lua
+    failure_cooloff_callback = function(domain, count)
+      if count == 1 then
+        return 600 -- 10 minutes
+      elseif count == 2 then
+        return 1800 -- 30 minutes
+      elseif count == 3 then
+        return 3600 -- 1 hour
+      elseif count == 4 then
+        return 43200 -- 12 hours
+      elseif count == 5 then
+        return 43200 -- 12 hours
+      else
+        return 86400 -- 24 hours
+      end
+    end
+```
+
 ## tls-alpn-01 challenge
 
 tls-alpn-01 challenge is currently supported on Openresty `1.15.8.x`, `1.17.8.x` and `1.19.3.x`.
@@ -346,6 +366,10 @@ default_config = {
   domain_whitelist = nil,
   -- restrict registering new cert only with domain checked by this function
   domain_whitelist_callback = nil,
+  -- interval to wait before retrying after failed certificate request
+  failure_cooloff = 300,
+  -- function that returns interval to wait before retrying after failed certificate request
+  failure_cooloff_callback = nil,
   -- the threshold to renew a cert before it expires, in seconds
   renew_threshold = 7 * 86400,
   -- interval to check cert renewal, in seconds
