@@ -633,6 +633,8 @@ storage_config = {
     auth_role = nil,
     -- The path to the JWT
     jwt_path = "/var/run/secrets/kubernetes.io/serviceaccount/token",
+    -- Vault namespace
+    namespace = nil,
 }
 ```
 

@@ -48,6 +48,7 @@ function _M.new(conf)
       timeout = conf.timeout or 2000,
       data_url = data_url,
       metadata_url = metadata_url,
+      namespace = conf.namespace,
     },
     mt
   )
@@ -89,6 +90,11 @@ local function api(self, method, uri, payload)
       return nil, "unable to SSL handshake with vault server: " .. err
     end
   end
+
+  if self.namespace then
+    self.headers["X-Vault-Namespace"] = self.namespace
+  end
+
   local res, err = client:request({
     path = uri,
     method = method,
@@ -135,7 +141,7 @@ function auth(self, conf)
 
   local file, err = io.open(self.jwt_path, "r")
 
-  if err then 
+  if err then
     return nil, err
   end
 
@@ -147,12 +153,12 @@ function auth(self, conf)
     jwt = token
   })
 
-  if err then 
+  if err then
     return nil, err
   end
 
   if not response["auth"] or not response["auth"]["client_token"] then
-    return nil, "Could not authenticate"  
+    return nil, "Could not authenticate"
   end
 
   return response["auth"]["client_token"]
@@ -196,7 +202,7 @@ local function get(self, k)
   local res, err = api(self, 'GET', self.data_url .. valid_vault_key(k))
   if err then
     return nil, err
-  elseif not res or not res["data"] or not res["data"]["data"] 
+  elseif not res or not res["data"] or not res["data"]["data"]
         or not res["data"]["data"]["value"] then
     return nil, nil
   end
