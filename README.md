@@ -116,7 +116,7 @@ http {
             require("resty.acme.autossl").ssl_certificate()
         }
 
-        location /.well-known {
+        location = /.well-known {
             content_by_lua_block {
                 require("resty.acme.autossl").serve_http_challenge()
             }
