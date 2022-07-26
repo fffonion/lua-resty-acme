@@ -343,7 +343,7 @@ function _M:new_account()
     }
   end
 
-  if self.eab_required then
+  if self.eab_required and (not self.eab_kid or not self.eab_hmac_key) then
     if not self.eab_handler then
       return nil, "eab_handler undefined while EAB is required by CA"
     end
@@ -548,7 +548,7 @@ function _M:order_certificate(domain_key, ...)
   -- setup challenges
   local finalize_url = order_body.finalize
   local order_url = order_headers["location"]
-  local authzs = order_body.authorizations
+  local authzs = order_body.authorizations or {}
   local registered_challenges = {}
   local registered_challenge_count = 0
   local has_valid_challenge = false
