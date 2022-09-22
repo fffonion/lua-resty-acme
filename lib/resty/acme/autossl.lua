@@ -285,7 +285,7 @@ function AUTOSSL.check_renew(premature)
 
   -- According to docs in https://github.com/openresty/lua-nginx-module#ngxtimerat, a premature
   -- timer expiration occurs when the nginx worker is trying to shut down. Here we are skipping
-  -- running this on shutdown, as it can be problematic
+  -- running this on Nginx worker shutdown, as it can be problematic
   if premature then
     return
   end
