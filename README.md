@@ -384,6 +384,8 @@ default_config = {
   enabled_challenge_handlers = { 'http-01' },
   -- time to wait before signaling ACME server to validate in seconds
   challenge_start_delay = 0,
+  -- whether renewal of certificates should happen before the nginx worker is shut down
+  renew_certs_on_shutdown = true,
 }
 ```
 
