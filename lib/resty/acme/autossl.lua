@@ -56,8 +56,6 @@ local default_config = {
   enabled_challenge_handlers = { 'http-01' },
   -- time to wait before signaling ACME server to validate in seconds
   challenge_start_delay = 0,
-  -- whether renewal of certificates should happen before the nginx worker is shut down
-  renew_certs_on_shutdown = true,
 }
 
 local domain_pkeys = {}
@@ -286,11 +284,9 @@ end
 function AUTOSSL.check_renew(premature)
 
   -- According to docs in https://github.com/openresty/lua-nginx-module#ngxtimerat, a premature
-  -- timer expiration occurs when the nginx worker is trying to shut  down.  With  the  default
-  -- configuration, the renew  certificates  will  happen  just  before  shutdown.  However, if
-  -- renew_certs_on_shutdown is set to false, renewal of certificates on shutdown will  not  be
-  -- run  when nginx worker is shutting down.
-  if premature and not AUTOSSL.config.renew_certs_on_shutdown then
+  -- timer expiration occurs when the nginx worker is trying to shut down. Here we are skipping
+  -- running this on shutdown, as it can be problematic
+  if premature then
     return
   end
 
