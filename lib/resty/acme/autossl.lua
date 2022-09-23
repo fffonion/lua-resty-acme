@@ -281,7 +281,15 @@ function AUTOSSL.update_cert(data)
   return err
 end
 
-function AUTOSSL.check_renew()
+function AUTOSSL.check_renew(premature)
+
+  -- According to docs in https://github.com/openresty/lua-nginx-module#ngxtimerat, a premature
+  -- timer expiration occurs when the nginx worker is trying to shut down. Here we are skipping
+  -- running this on Nginx worker shutdown, as it can be problematic
+  if premature then
+    return
+  end
+
   local now = ngx.now()
   local interval = AUTOSSL.config.renew_check_interval
   if ((now - now % interval) / interval) % ngx.worker.count() ~= ngx.worker.id() then
