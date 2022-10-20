@@ -475,14 +475,10 @@ function _M:finalize(finalize_url, order_url, csr)
     csr = encode_base64url(csr)
   }
 
-  local resp, headers, err = self:post(finalize_url, payload)
+  local resp, _, err = self:post(finalize_url, payload)
 
   if err then
     return nil, "failed to send finalize request: " .. err
-  end
-
-  if not headers["content-type"] == "application/pem-certificate-chain" then
-    return nil, "wrong content type"
   end
 
   -- Wait until the order is valid: ready to download
@@ -500,6 +496,11 @@ function _M:finalize(finalize_url, order_url, csr)
   local body, headers, err = self:post(order_status.certificate)
   if err then
     return nil, "failed to fetch certificate: " .. err
+  end
+
+  local cert_content_type = headers["content-type"]
+  if cert_content_type and string.sub(cert_content_type, 1, 33):lower() ~= "application/pem-certificate-chain" then
+    return nil, "wrong content type, got " .. cert_content_type
   end
 
   local preferred_chain = self.conf.preferred_chain
