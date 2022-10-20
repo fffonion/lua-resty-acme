@@ -104,7 +104,7 @@ end
 
 -- get cert and key cdata with caching
 local function get_certkey_parsed(domain, typ)
-  local data, _ --[[stale]], _ --[[flags]] = certs_cache[typ]:get(domain)
+  local data, data_staled, _ --[[flags]] = certs_cache[typ]:get(domain)
 
   if data then
     return data, nil
@@ -142,6 +142,9 @@ local function get_certkey_parsed(domain, typ)
   -- fill in local cache
   if cache then
     certs_cache[typ]:set(domain, cache, CERTS_CACHE_TTL)
+  elseif err_ret and data_staled then
+    log(ngx_WARN, err_ret, ", serving staled cert for ", domain)
+    return data_staled, nil
   else
     certs_cache[typ]:set(domain, null, CERTS_CACHE_NEG_TTL)
   end
@@ -269,7 +272,7 @@ function AUTOSSL.update_cert(data)
     AUTOSSL.storage:set(failure_count_key, count)
     local cooloff = AUTOSSL.config.failure_cooloff
     if failure_cooloff_callback then
-      cooloff = failure_cooloff_callback(domain, count)
+      cooloff = failure_cooloff_callback(data.domain, count)
     end
     local now = ngx.now()
     AUTOSSL.storage:add(failure_lock_key, now + cooloff, cooloff)
