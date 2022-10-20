@@ -1,8 +1,8 @@
 package = "lua-resty-acme"
-version = "0.8.1-2"
+version = "0.8.2-1"
 source = {
    url = "git+https://github.com/fffonion/lua-resty-acme.git",
-   tag = "0.8.1"
+   tag = "0.8.2"
 }
 description = {
    summary = "Automatic Let's Encrypt certificate serving and Lua implementation of ACME procotol",

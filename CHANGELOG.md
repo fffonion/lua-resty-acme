@@ -2,8 +2,15 @@
 ## [Unreleased]
 
 
+<a name="0.8.2"></a>
+## [0.8.2] - 2022-10-20
+### bug fixes
+- **autossl:** fallback to stale cache if storage is not accessible ([#82](https://github.com/fffonion/lua-resty-acme/issues/82)) [9a4e190](https://github.com/fffonion/lua-resty-acme/commit/9a4e190a966a766eb69aa7a090d7ca2c72cd33de)
+- **autossl:** skip the execution of check_renew function on Nginx worker shutdown ([#79](https://github.com/fffonion/lua-resty-acme/issues/79)) [bed9c35](https://github.com/fffonion/lua-resty-acme/commit/bed9c350ea78a58666c8eeac548cb7da0967d190)
+
+
 <a name="0.8.1"></a>
-## [0.8.1] - 2022-07-26
+## [0.8.1] - 2022-07-28
 ### bug fixes
 - **client:** skip checking eab_handler if eab_kid and eab_hmac_key is set ([#71](https://github.com/fffonion/lua-resty-acme/issues/71)) [6004738](https://github.com/fffonion/lua-resty-acme/commit/6004738222718c678d612afb61a0a428ee25fdb4)
 
@@ -243,7 +250,8 @@
 - **crypto:** ffi openssl supports generating ec certificates [bc9d989](https://github.com/fffonion/lua-resty-acme/commit/bc9d989b4eb8bfa954f2f1ab08b0449957a27402)
 
 
-[Unreleased]: https://github.com/fffonion/lua-resty-acme/compare/0.8.1...HEAD
+[Unreleased]: https://github.com/fffonion/lua-resty-acme/compare/0.8.2...HEAD
+[0.8.2]: https://github.com/fffonion/lua-resty-acme/compare/0.8.1...0.8.2
 [0.8.1]: https://github.com/fffonion/lua-resty-acme/compare/0.8.0...0.8.1
 [0.8.0]: https://github.com/fffonion/lua-resty-acme/compare/0.7.2...0.8.0
 [0.7.2]: https://github.com/fffonion/lua-resty-acme/compare/0.7.1...0.7.2
