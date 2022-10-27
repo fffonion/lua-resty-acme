@@ -116,7 +116,7 @@ jobs:
         if [ ! -e $OPENSSL_PREFIX/include ]; then ./config shared -d --prefix=$OPENSSL_PREFIX -DPURIFY > build.log 2>&1 || (cat build.log && exit 1); fi
         if [ ! -e $OPENSSL_PREFIX/include ]; then make -j$JOBS > build.log 2>&1 || (cat build.log && exit 1); fi
         if [ ! -e $OPENSSL_PREFIX/include ]; then sudo make PATH=$PATH install_sw > build.log 2>&1 || (cat build.log && exit 1); fi
-        mkdir -p $OPENSSL_PREFIX/certs/ && cp -r /etc/ssl/certs/* $OPENSSL_PREFIX/certs/
+        mkdir -p $OPENSSL_PREFIX/certs/ && sudo cp -r /etc/ssl/certs/* $OPENSSL_PREFIX/certs/
 
     - name: Build LuaJIT
       run: |
