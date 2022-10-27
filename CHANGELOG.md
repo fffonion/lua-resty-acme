@@ -2,6 +2,12 @@
 ## [Unreleased]
 
 
+<a name="0.9.0"></a>
+## [0.9.0] - 2022-10-27
+### features
+- **redis:** support redis ssl ([#86](https://github.com/fffonion/lua-resty-acme/issues/86)) [0aa3568](https://github.com/fffonion/lua-resty-acme/commit/0aa35681fe4357248e21676db122551d7fc20020)
+
+
 <a name="0.8.2"></a>
 ## [0.8.2] - 2022-10-20
 ### bug fixes
@@ -250,7 +256,8 @@
 - **crypto:** ffi openssl supports generating ec certificates [bc9d989](https://github.com/fffonion/lua-resty-acme/commit/bc9d989b4eb8bfa954f2f1ab08b0449957a27402)
 
 
-[Unreleased]: https://github.com/fffonion/lua-resty-acme/compare/0.8.2...HEAD
+[Unreleased]: https://github.com/fffonion/lua-resty-acme/compare/0.9.0...HEAD
+[0.9.0]: https://github.com/fffonion/lua-resty-acme/compare/0.8.2...0.9.0
 [0.8.2]: https://github.com/fffonion/lua-resty-acme/compare/0.8.1...0.8.2
 [0.8.1]: https://github.com/fffonion/lua-resty-acme/compare/0.8.0...0.8.1
 [0.8.0]: https://github.com/fffonion/lua-resty-acme/compare/0.7.2...0.8.0
