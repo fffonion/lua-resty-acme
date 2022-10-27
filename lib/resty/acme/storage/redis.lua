@@ -12,6 +12,9 @@ function _M.new(conf)
       port = conf.port or 6379,
       database = conf.database,
       auth = conf.auth,
+      ssl = conf.ssl or false,
+      ssl_verify = conf.ssl_verify or false,
+      server_name = conf.server_name,
     },
     mt
   )
@@ -23,10 +26,12 @@ local function op(self, op, ...)
   local client = redis:new()
   client:set_timeouts(1000, 1000, 1000) -- 1 sec
 
-  ok, err = client:connect(
-    self.host,
-    self.port
-  )
+  local sock_opts = {
+    ssl = self.ssl,
+    ssl_verify = self.ssl_verify,
+    server_name = self.server_name,
+  }
+  ok, err = client:connect(self.host, self.port, sock_opts)
   if not ok then
     return nil, err
   end
