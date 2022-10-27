@@ -14,7 +14,7 @@ function _M.new(conf)
       auth = conf.auth,
       ssl = conf.ssl or false,
       ssl_verify = conf.ssl_verify or false,
-      server_name = conf.server_name,
+      ssl_server_name = conf.ssl_server_name,
     },
     mt
   )
@@ -29,7 +29,7 @@ local function op(self, op, ...)
   local sock_opts = {
     ssl = self.ssl,
     ssl_verify = self.ssl_verify,
-    server_name = self.server_name,
+    server_name = self.ssl_server_name,
   }
   ok, err = client:connect(self.host, self.port, sock_opts)
   if not ok then
