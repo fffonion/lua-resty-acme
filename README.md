@@ -597,6 +597,9 @@ storage_config = {
     database = 0,
     -- Redis authentication key
     auth = nil,
+    ssl = false,
+    ssl_verify = false,
+    ssl_server_name = nil,
 }
 ```
 
