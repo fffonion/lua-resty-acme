@@ -498,9 +498,8 @@ function AUTOSSL.ssl_certificate()
     elseif certkey == null then
       log(ngx_DEBUG, "negative cached domain cert")
     elseif certkey then
-      if chains_set_count == 0 then
+      if i == 1 then
         ssl.clear_certs()
-        chains_set_count = chains_set_count + 1
       end
       chains_set[i] = true
 
@@ -510,7 +509,9 @@ function AUTOSSL.ssl_certificate()
     end
   end
 
-  if domain_key_types_count ~= chains_set then
+  chains_set_count = #chains_set
+  
+  if domain_key_types_count ~= chains_set_count then
     ngx.timer.at(0, function()
       for i, typ in ipairs(domain_key_types) do
         if not chains_set[i] then
