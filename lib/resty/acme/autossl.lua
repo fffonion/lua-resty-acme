@@ -56,6 +56,8 @@ local default_config = {
   enabled_challenge_handlers = { 'http-01' },
   -- time to wait before signaling ACME server to validate in seconds
   challenge_start_delay = 0,
+  -- if true, the request to nginx waits until the cert has been generated and it is used right away
+  blocking = false,
 }
 
 local domain_pkeys = {}
@@ -103,7 +105,7 @@ local function get_certkey(domain, typ)
 end
 
 -- get cert and key cdata with caching
-local function get_certkey_parsed(domain, typ)
+local function get_certkey_parsed(domain, typ, skip_null_cache)
   local data, data_staled, _ --[[flags]] = certs_cache[typ]:get(domain)
 
   if data then
@@ -145,7 +147,7 @@ local function get_certkey_parsed(domain, typ)
   elseif err_ret and data_staled then
     log(ngx_WARN, err_ret, ", serving staled cert for ", domain)
     return data_staled, nil
-  else
+  elseif not skip_null_cache then
     certs_cache[typ]:set(domain, null, CERTS_CACHE_NEG_TTL)
   end
   return cache, err_ret
@@ -491,8 +493,8 @@ function AUTOSSL.ssl_certificate()
   local chains_set_count = 0
   local chains_set = {}
 
-  for i, typ in ipairs(domain_key_types) do
-    local certkey, err = get_certkey_parsed(domain, typ)
+  local get_cert_inline = function(i, typ, skip_null_cache)
+    local certkey, err = get_certkey_parsed(domain, typ, skip_null_cache)
     if err then
       log(ngx_ERR, "can't read key and cert from storage ", err)
     elseif certkey == null then
@@ -510,25 +512,38 @@ function AUTOSSL.ssl_certificate()
     end
   end
 
-  if domain_key_types_count ~= chains_set then
-    ngx.timer.at(0, function()
-      for i, typ in ipairs(domain_key_types) do
-        if not chains_set[i] then
-          local err = AUTOSSL.update_cert({
-            domain = domain,
-            renew = false,
-            tries = 0,
-            type = typ,
-          })
+  for i, typ in ipairs(domain_key_types) do
+    get_cert_inline(i, typ, AUTOSSL.config.blocking)
+  end
 
-          if err then
-            log(ngx_ERR, "failed to create ", typ, " certificate for domain ", domain, ": ", err)
-          end
+  if domain_key_types_count ~= chains_set then
+    local update_cert_inline = function(i, typ)
+      if not chains_set[i] then
+        local err = AUTOSSL.update_cert({
+          domain = domain,
+          renew = false,
+          tries = 0,
+          type = typ,
+        })
+
+        if err then
+          log(ngx_ERR, "failed to create ", typ, " certificate for domain ", domain, ": ", err)
         end
       end
-    end)
-    -- serve fallback cert this time
-    return
+    end
+
+    for i, typ in ipairs(domain_key_types) do
+      if AUTOSSL.config.blocking then
+        -- blocking update_cert and attempt to set cert again
+        update_cert_inline(i, typ)
+        get_cert_inline(i, typ, false)
+      else
+        -- non blocking update_cert, let it fallback to default cert
+        ngx.timer.at(0, function()
+          update_cert_inline(i, typ)
+        end)
+      end
+    end
   end
 end
 

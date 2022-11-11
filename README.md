@@ -384,6 +384,8 @@ default_config = {
   enabled_challenge_handlers = { 'http-01' },
   -- time to wait before signaling ACME server to validate in seconds
   challenge_start_delay = 0,
+  -- if true, the request to nginx waits until the cert has been generated and it is used right away
+  blocking = false,
 }
 ```
 
