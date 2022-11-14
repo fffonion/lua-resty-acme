@@ -518,30 +518,30 @@ function AUTOSSL.ssl_certificate()
 
   if domain_key_types_count ~= chains_set then
     local update_cert_inline = function(i, typ)
-      if not chains_set[i] then
-        local err = AUTOSSL.update_cert({
-          domain = domain,
-          renew = false,
-          tries = 0,
-          type = typ,
-        })
+      local err = AUTOSSL.update_cert({
+        domain = domain,
+        renew = false,
+        tries = 0,
+        type = typ,
+      })
 
-        if err then
-          log(ngx_ERR, "failed to create ", typ, " certificate for domain ", domain, ": ", err)
-        end
+      if err then
+        log(ngx_ERR, "failed to create ", typ, " certificate for domain ", domain, ": ", err)
       end
     end
 
     for i, typ in ipairs(domain_key_types) do
-      if AUTOSSL.config.blocking then
-        -- blocking update_cert and attempt to set cert again
-        update_cert_inline(i, typ)
-        get_cert_inline(i, typ, false)
-      else
-        -- non blocking update_cert, let it fallback to default cert
-        ngx.timer.at(0, function()
+      if not chains_set[i] then
+        if AUTOSSL.config.blocking then
+          -- blocking update_cert and attempt to set cert again
           update_cert_inline(i, typ)
-        end)
+          get_cert_inline(i, typ, false)
+        else
+          -- non blocking update_cert, let it fallback to default cert
+          ngx.timer.at(0, function()
+            update_cert_inline(i, typ)
+          end)
+        end
       end
     end
   end
