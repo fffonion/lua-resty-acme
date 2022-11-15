@@ -85,6 +85,10 @@ local account_private_key_prefix = "account_key:"
 local certificate_failure_lock_key_prefix = "failure_lock:"
 local certificate_failure_count_prefix = "failed_attempts:"
 
+function AUTOSSL.get_cert_from_cache(domain, typ)
+  return certs_cache[typ]:get(domain)
+end
+
 -- get cert from storage
 local function get_certkey(domain, typ)
   local domain_key = domain_cache_key_prefix .. typ .. ":" .. domain
@@ -106,7 +110,7 @@ end
 
 -- get cert and key cdata with caching
 local function get_certkey_parsed(domain, typ, skip_null_cache)
-  local data, data_staled, _ --[[flags]] = certs_cache[typ]:get(domain)
+  local data, data_staled, _ --[[flags]] = AUTOSSL.get_cert_from_cache(domain, typ)
 
   if data then
     return data, nil
