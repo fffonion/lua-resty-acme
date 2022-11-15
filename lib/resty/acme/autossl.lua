@@ -105,7 +105,7 @@ local function get_certkey(domain, typ)
 end
 
 -- get cert and key cdata with caching
-local function get_certkey_parsed(domain, typ, skip_null_cache)
+local function get_certkey_parsed(domain, typ)
   local data, data_staled, _ --[[flags]] = certs_cache[typ]:get(domain)
 
   if data then
@@ -147,7 +147,7 @@ local function get_certkey_parsed(domain, typ, skip_null_cache)
   elseif err_ret and data_staled then
     log(ngx_WARN, err_ret, ", serving staled cert for ", domain)
     return data_staled, nil
-  elseif not skip_null_cache then
+  else
     certs_cache[typ]:set(domain, null, CERTS_CACHE_NEG_TTL)
   end
   return cache, err_ret
@@ -493,8 +493,8 @@ function AUTOSSL.ssl_certificate()
   local chains_set_count = 0
   local chains_set = {}
 
-  local get_cert_inline = function(i, typ, skip_null_cache)
-    local certkey, err = get_certkey_parsed(domain, typ, skip_null_cache)
+  local get_cert_inline = function(i, typ)
+    local certkey, err = get_certkey_parsed(domain, typ)
     if err then
       log(ngx_ERR, "can't read key and cert from storage ", err)
     elseif certkey == null then
@@ -513,7 +513,7 @@ function AUTOSSL.ssl_certificate()
   end
 
   for i, typ in ipairs(domain_key_types) do
-    get_cert_inline(i, typ, AUTOSSL.config.blocking)
+    get_cert_inline(i, typ)
   end
 
   if domain_key_types_count ~= chains_set then
@@ -529,11 +529,10 @@ function AUTOSSL.ssl_certificate()
 
           if err then
             log(ngx_ERR, "failed to create ", typ, " certificate for domain ", domain, ": ", err)
-          end
-
-          if AUTOSSL.config.blocking then
+          elseif AUTOSSL.config.blocking then
             -- in blocking mode we can try to use the cert right away
-            get_cert_inline(i, typ, false)
+            certs_cache[typ]:delete(domain)
+            get_cert_inline(i, typ)
           end
         end
       end
