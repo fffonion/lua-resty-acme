@@ -11,9 +11,10 @@ env_to_nginx("TEST_TRY_NONCE_INFINITELY=1");
 $ENV{'tm'} = time;
 
 sub ::make_http_config{
-    my ($key_types, $key_path, $challenges, $shm_name, $storage) = @_;
+    my ($key_types, $key_path, $challenges, $shm_name, $storage, $blocking) = @_;
     $shm_name ||= "acme";
     $storage ||= "shm";
+    $blocking ||= "false";
     return qq{
         lua_package_path "$pwd/lib/?.lua;$pwd/lib/?/init.lua;$pwd/../lib/?.lua;$pwd/../lib/?/init.lua;;";
         lua_package_cpath "$pwd/luajit/lib/?.so;/usr/local/openresty-debug/lualib/?.so;/usr/local/openresty/lualib/?.so;;";
@@ -71,6 +72,7 @@ sub ::make_http_config{
                 storage_adapter = "$storage",
                 -- bump up this slightly in test
                 challenge_start_delay = 3,
+                blocking = $blocking,
             }, {
                 api_uri = "https://localhost:14000/dir",
             })
@@ -280,3 +282,50 @@ set ecc key
 --- no_error_log
 [warn]@we allow warn here since we are using plain FFI mode for resty.openssl.ssl
 [error]
+
+=== TEST 4: blocking mode
+--- http_config eval: ::make_http_config("'rsa'", "/tmp/account.key", "'http-01'", "acme", "file", "true")
+--- config
+    listen 5002;
+    listen 5001 ssl;
+    ssl_certificate /tmp/default.pem;
+    ssl_certificate_key /tmp/default.key;
+
+    ssl_certificate_by_lua_block {
+        require("resty.acme.autossl").ssl_certificate()
+    }
+
+    location /.well-known {
+        content_by_lua_block {
+            require("resty.acme.autossl").serve_http_challenge()
+        }
+    }
+
+    location ~ /t/(.+) {
+        set $domain $1;
+        content_by_lua_block {
+            local ngx_pipe = require "ngx.pipe"
+            local opts = {
+                merge_stderr = true,
+                buffer_size = 256000,
+            }
+            local out
+            local proc = ngx_pipe.spawn({'bash', '-c', "echo q |openssl s_client -host 127.0.0.1 -servername ".. ngx.var.domain .. " -port 5001|openssl x509 -noout -text && sleep 0.1"}, opts)
+            local data, err, partial = proc:stdout_read_all()
+            if ngx.re.match(data, ngx.var.domain) then
+                local f = io.open("/tmp/test1", "w")
+                f:write(data)
+                f:close()
+                ngx.say(data)
+            end
+            ngx.say(out or "error")
+        }
+    }
+--- request eval
+"GET /t/e2e-test1-$ENV{'tm'}"
+--- response_body_like eval
+"Pebble Intermediate.+CN\\s*=\\s*e2e-test1.+rsaEncryption"
+--- no_error_log
+[warn]
+[error]
+
