@@ -2,9 +2,24 @@ name: Tests
 
 on:
   push:
+    paths-ignore:
+    # ignore top-level markdown files (CHANGELOG.md, README.md, etc.)
+    - '*.md'
+    branches:
+    - master
+    - release/*
+    - test-please/*
   pull_request:
+    paths-ignore:
+    # ignore top-level markdown files (CHANGELOG.md, README.md, etc.)
+    - '*.md'
   schedule:
   - cron:  '0 7 * * *'
+
+# cancel previous runs if new commits are pushed to the PR, but run for each commit on master
+concurrency:
+  group: ${{ github.workflow }}-${{ github.head_ref || github.run_id }}
+  cancel-in-progress: true
 
 jobs:
   tests:
