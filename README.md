@@ -164,7 +164,11 @@ domain_whitelist_callback = function(domain, is_new_cert_needed)
     local http = require("resty.http")
     local res, err = httpc:request_uri("http://example.com")
     -- access the storage
-    local value, err = require("resty.acme.autossl").storage:get("key")
+    local acme = require("resty.acme.autossl")
+    local value, err = acme.storage:get("key")
+    -- get cert from resty LRU cache
+    -- cached = { pkey, cert } or nil if cert is not in cache
+    local cached, staled, flags = acme.get_cert_from_cache(domain, "rsa")
     -- do something to check the domain
     -- return is_domain_included
 end}),
