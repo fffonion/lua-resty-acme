@@ -2,6 +2,16 @@
 ## [Unreleased]
 
 
+<a name="0.10.0"></a>
+## [0.10.0] - 2022-11-18
+### features
+- **autossl:** expose function to get cert from LRU cache ([#96](https://github.com/fffonion/lua-resty-acme/issues/96)) [6135d0e](https://github.com/fffonion/lua-resty-acme/commit/6135d0e3ccc31f58193af1f49ec6fcdd9f45d6da)
+- **autossl:** better cache handling in blocking mode [40f5d2d](https://github.com/fffonion/lua-resty-acme/commit/40f5d2d679a684eab81ccb4fcd1282a4255d8c37)
+- **autossl:** fix behavior change in non blocking mode [aa484cc](https://github.com/fffonion/lua-resty-acme/commit/aa484ccc0ecd7ee1db4162c46feb9617776e0907)
+- **autossl:** move chains set condition back inside the main loop [b83a535](https://github.com/fffonion/lua-resty-acme/commit/b83a53521d967d9c0f7f2e990ba920734eb27b0f)
+- **autossl:** add blocking mode [5a623a5](https://github.com/fffonion/lua-resty-acme/commit/5a623a5d975341aadbf8d09d23cca24156178374)
+
+
 <a name="0.9.0"></a>
 ## [0.9.0] - 2022-10-27
 ### features
@@ -256,7 +266,8 @@
 - **crypto:** ffi openssl supports generating ec certificates [bc9d989](https://github.com/fffonion/lua-resty-acme/commit/bc9d989b4eb8bfa954f2f1ab08b0449957a27402)
 
 
-[Unreleased]: https://github.com/fffonion/lua-resty-acme/compare/0.9.0...HEAD
+[Unreleased]: https://github.com/fffonion/lua-resty-acme/compare/0.10.0...HEAD
+[0.10.0]: https://github.com/fffonion/lua-resty-acme/compare/0.9.0...0.10.0
 [0.9.0]: https://github.com/fffonion/lua-resty-acme/compare/0.8.2...0.9.0
 [0.8.2]: https://github.com/fffonion/lua-resty-acme/compare/0.8.1...0.8.2
 [0.8.1]: https://github.com/fffonion/lua-resty-acme/compare/0.8.0...0.8.1
