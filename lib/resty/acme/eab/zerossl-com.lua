@@ -21,11 +21,11 @@ local function handle(account_email)
   local body = json.decode(resp.body)
 
   if not body['success'] then
-    return nil, nil, "zerossl.com API error: " .. body
+    return nil, nil, "zerossl.com API error: " .. resp.body
   end
 
   if not body['eab_kid'] or not body['eab_hmac_key'] then
-    return nil, nil, "zerossl.com API response missing eab_kid or eab_hmac_key: " .. body
+    return nil, nil, "zerossl.com API response missing eab_kid or eab_hmac_key: " .. resp.body
   end
 
   return body['eab_kid'], body['eab_hmac_key']
