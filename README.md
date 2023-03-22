@@ -606,6 +606,7 @@ storage_config = {
     ssl = false,
     ssl_verify = false,
     ssl_server_name = nil,
+    namespace = "",
 }
 ```
 
