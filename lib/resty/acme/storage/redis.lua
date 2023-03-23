@@ -1,5 +1,7 @@
 local redis = require "resty.redis"
 local fmt   = string.format
+local log   = util.log
+local ngx_ERR = ngx.ERR
 
 local _M = {}
 local mt = {__index = _M}
@@ -57,31 +59,30 @@ local function op(self, op, ...)
   return ok, err
 end
 
-local function add_namespace(namespace, key)
-  if namespace == "" then
-    return key
-  else
-    -- <namespace>::<real_key>
-    return fmt("%s::%s", namespace, key)
-  end
-end
-
 local function remove_namespace(namespace, keys)
   if namespace == "" then
     return keys
   else
-    -- <namespace>::<real_key>
-    local start = #namespace + 2 + 1
+    -- <namespace><real_key>
+    local len = #namepspace
+    local start = len + 1
     for k, v in ipairs(keys) do
-      keys[k] = v:sub(start)
+      if v:sub(1, len) == namespace then
+        keys[k] = v:sub(start)
+      else
+        local msg = fmt("found a key '%s', expected to be prefixed with namespace '%s'"
+                        v, namespace)
+        log(ngx_ERR, msg)
+      end
     end
+
     return keys
   end
 end
 
 -- TODO: use EX/NX flag if we can determine redis version (>=2.6.12)
 function _M:add(k, v, ttl)
-  k = add_namespace(self.namespace, k)
+  k = self.namespace .. k
   local ok, err = op(self, 'setnx', k, v)
   if err then
     return err
@@ -97,7 +98,7 @@ function _M:add(k, v, ttl)
 end
 
 function _M:set(k, v, ttl)
-  k = add_namespace(self.namespace, k)
+  k = self.namespace .. k
   local _, err = op(self, 'set', k, v)
   if err then
     return err
@@ -111,7 +112,7 @@ function _M:set(k, v, ttl)
 end
 
 function _M:delete(k)
-  k = add_namespace(self.namespace, k)
+  k = self.namespace .. k
   local _, err = op(self, 'del', k)
   if err then
     return err
@@ -119,7 +120,7 @@ function _M:delete(k)
 end
 
 function _M:get(k)
-  k = add_namespace(self.namespace, k)
+  k = self.namespace .. k
   local res, err = op(self, 'get', k)
   if res == ngx.null then
     return nil, err
@@ -130,7 +131,7 @@ end
 local empty_table = {}
 function _M:list(prefix)
   prefix = prefix or ""
-  prefix = add_namespace(self.namespace, prefix)
+  prefix = self.namespace .. prefix
   local res, err = op(self, 'keys', prefix .. "*")
   if not res or res == ngx.null then
     return empty_table, err
