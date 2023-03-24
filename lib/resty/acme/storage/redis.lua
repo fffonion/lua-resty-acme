@@ -1,4 +1,5 @@
 local redis = require "resty.redis"
+local util = require "resty.acme.util"
 local fmt   = string.format
 local log   = util.log
 local ngx_ERR = ngx.ERR
@@ -64,7 +65,7 @@ local function remove_namespace(namespace, keys)
     return keys
   else
     -- <namespace><real_key>
-    local len = #namepspace
+    local len = #namespace
     local start = len + 1
     for k, v in ipairs(keys) do
       if v:sub(1, len) == namespace then
