@@ -70,7 +70,7 @@ local function remove_namespace(namespace, keys)
       if v:sub(1, len) == namespace then
         keys[k] = v:sub(start)
       else
-        local msg = fmt("found a key '%s', expected to be prefixed with namespace '%s'"
+        local msg = fmt("found a key '%s', expected to be prefixed with namespace '%s'",
                         v, namespace)
         log(ngx_ERR, msg)
       end
