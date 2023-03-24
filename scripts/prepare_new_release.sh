@@ -6,6 +6,12 @@ if [[ -z $1 ]]; then
     exit 1
 fi
 
+if [[ $(uname) == "Darwin" ]]; then
+    SED=gsed
+else
+    SED=sed
+fi
+
 git reset
 old_rockspec=$(ls *.rockspec -r1|grep -v dev|grep -v "$new_v"|head -n1)
 old_v=$(echo $old_rockspec | cut -d '-' -f4)
@@ -22,11 +28,11 @@ git checkout -b release/${new_v}
 new_rockspec="${old_rockspec/$old_v/$new_v}"
 cp "$old_rockspec" "$new_rockspec"
 git rm "$old_rockspec"
-sed -i "s/$old_v/$new_v/g" "$new_rockspec"
+SED -i "s/$old_v/$new_v/g" "$new_rockspec"
 git add "$new_rockspec"
 
 # file
-sed -i "s/_VERSION = '$old_v'/_VERSION = '$new_v'/g" lib/resty/acme/client.lua
+SED -i "s/_VERSION = '$old_v'/_VERSION = '$new_v'/g" lib/resty/acme/client.lua
 git add -u
 
 # changelog
