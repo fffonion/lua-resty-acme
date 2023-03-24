@@ -606,6 +606,8 @@ storage_config = {
     ssl = false,
     ssl_verify = false,
     ssl_server_name = nil,
+    -- namespace as a prefix of key
+    namespace = "",
 }
 ```
 
