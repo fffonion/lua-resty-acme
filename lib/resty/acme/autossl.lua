@@ -370,10 +370,14 @@ function AUTOSSL.init(autossl_config, acme_config)
   if acme_config.storage_adapter == "resty.acme.storage.redis" and
     acme_config.storage_config.namespace then
     local namespace = acme_config.storage_config.namespace
-    for _, v in ipairs(reserved_words) do
-      if namespace:find(v, 1, true) == 1 then
-        error("namespace can't be prefixed with reserved word: " .. v)
-      end
+    local re = "^(" .. table.concat(reserved_words, '|') .. ")"
+    local m, err = ngx.re.match(namespace, re, "jo")
+    if err then
+      error("error during ngx.re.match: " .. err)
+    end
+
+    if m then
+      error("namespace can't be prefixed with reserved word: " .. m[0])
     end
   end
 
