@@ -85,13 +85,14 @@ local account_private_key_prefix = "account_key:"
 local certificate_failure_lock_key_prefix = "failure_lock:"
 local certificate_failure_count_prefix = "failed_attempts:"
 
-local reserved_words = {
+local reserved_words_re = table.concat({
   update_cert_lock_key_prefix,
   domain_cache_key_prefix,
   account_private_key_prefix,
   certificate_failure_lock_key_prefix,
   certificate_failure_count_prefix,
-}
+}, '|')
+reserved_words_re = "^(" .. reserved_words_re .. ")"
 
 function AUTOSSL.get_cert_from_cache(domain, typ)
   return certs_cache[typ]:get(domain)
@@ -370,8 +371,7 @@ function AUTOSSL.init(autossl_config, acme_config)
   if acme_config.storage_adapter == "resty.acme.storage.redis" and
     acme_config.storage_config.namespace then
     local namespace = acme_config.storage_config.namespace
-    local re = "^(" .. table.concat(reserved_words, '|') .. ")"
-    local m, err = ngx.re.match(namespace, re, "jo")
+    local m, err = ngx.re.match(namespace, reserved_words_re, "jo")
     if err then
       error("error during ngx.re.match: " .. err)
     end
