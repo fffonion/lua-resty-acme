@@ -85,6 +85,15 @@ local account_private_key_prefix = "account_key:"
 local certificate_failure_lock_key_prefix = "failure_lock:"
 local certificate_failure_count_prefix = "failed_attempts:"
 
+local reserved_words_re = table.concat({
+  update_cert_lock_key_prefix,
+  domain_cache_key_prefix,
+  account_private_key_prefix,
+  certificate_failure_lock_key_prefix,
+  certificate_failure_count_prefix,
+}, '|')
+reserved_words_re = "^(" .. reserved_words_re .. ")"
+
 function AUTOSSL.get_cert_from_cache(domain, typ)
   return certs_cache[typ]:get(domain)
 end
@@ -358,6 +367,19 @@ function AUTOSSL.init(autossl_config, acme_config)
 
   acme_config.storage_adapter = autossl_config.storage_adapter
   acme_config.storage_config = autossl_config.storage_config
+
+  if acme_config.storage_adapter == "resty.acme.storage.redis" and
+    acme_config.storage_config.namespace then
+    local namespace = acme_config.storage_config.namespace
+    local m, err = ngx.re.match(namespace, reserved_words_re, "jo")
+    if err then
+      error("error during ngx.re.match: " .. err)
+    end
+
+    if m then
+      error("namespace can't be prefixed with reserved word: " .. m[0])
+    end
+  end
 
   if autossl_config.account_key_path then
     acme_config.account_key = AUTOSSL.load_account_key(autossl_config.account_key_path)
