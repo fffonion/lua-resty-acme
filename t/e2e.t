@@ -318,7 +318,7 @@ set ecc key
                 f:close()
                 ngx.say(data)
             end
-            ngx.say(out or "error")
+            ngx.say(data or "error")
         }
     }
 --- request eval
