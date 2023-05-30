@@ -50,7 +50,7 @@ unable to SSL handshake with vault.+
 nil
 "
 --- error_log
-self signed certificate
+self.signed certificate
 
 === TEST 2: Vault tls_verify off connection ok
 --- http_config eval: $::HttpConfig

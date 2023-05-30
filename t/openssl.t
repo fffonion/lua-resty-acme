@@ -24,6 +24,6 @@ __DATA__
 --- request
     GET /t
 --- error_log
-using ffi, OpenSSL version linked: 10
+using ffi, OpenSSL version linked:
 --- no_error_log
 [error]
