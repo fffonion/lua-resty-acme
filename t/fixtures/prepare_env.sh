@@ -1,10 +1,10 @@
 #!/bin/bash
 
 echo "Prepare containers"
-docker run -d -e CONSUL_CLIENT_INTERFACE='eth0' -e CONSUL_BIND_INTERFACE='eth0' -p 127.0.0.1:8500:8500 consul agent -server -bootstrap-expect=1
+docker run -d -e CONSUL_CLIENT_INTERFACE='eth0' -e CONSUL_BIND_INTERFACE='eth0' -p 127.0.0.1:8500:8500 hashicorp/consul agent -server -bootstrap-expect=1
 openssl req -x509 -newkey rsa:4096 -keyout /tmp/key.pem -out /tmp/cert.pem -days 1 -nodes -subj '/CN=some.vault'
 chmod 777 /tmp/key.pem /tmp/cert.pem
-docker run -d --user root --cap-add=IPC_LOCK -e VAULT_DEV_ROOT_TOKEN_ID=root --name=vault -e 'VAULT_LOCAL_CONFIG={"listener":{"tcp":{"tls_key_file":"/tmp/key.pem","tls_cert_file":"/tmp/cert.pem","address":"0.0.0.0:8210"}}}' -v /tmp/key.pem:/tmp/key.pem -v /tmp/cert.pem:/tmp/cert.pem -p 127.0.0.1:8200:8200 -p 127.0.0.1:8210:8210 vault server -dev
+docker run -d --user root --cap-add=IPC_LOCK -e VAULT_DEV_ROOT_TOKEN_ID=root --name=vault -e 'VAULT_LOCAL_CONFIG={"listener":{"tcp":{"tls_key_file":"/tmp/key.pem","tls_cert_file":"/tmp/cert.pem","address":"0.0.0.0:8210"}}}' -v /tmp/key.pem:/tmp/key.pem -v /tmp/cert.pem:/tmp/cert.pem -p 127.0.0.1:8200:8200 -p 127.0.0.1:8210:8210 hashicorp/vault server -dev
 docker logs vault
 docker run -d -v /usr/share/ca-certificates/:/etc/ssl/certs -p 4001:4001 -p 2380:2380 -p 2379:2379  --name etcd quay.io/coreos/etcd:v2.3.8  -name etcd0  -advertise-client-urls http://${HostIP}:2379,http://${HostIP}:4001  -listen-client-urls http://0.0.0.0:2379,http://0.0.0.0:4001  -initial-advertise-peer-urls http://${HostIP}:2380  -listen-peer-urls http://0.0.0.0:2380  -initial-cluster-token etcd-cluster-1  -initial-cluster etcd0=http://${HostIP}:2380  -initial-cluster-state new
 docker logs etcd
