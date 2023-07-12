@@ -119,7 +119,7 @@ function _M:set(k, v, ttl)
   else
     ms = nil
   end
-  local _, err = op(self, 'set', k, v, 'ex', ttl)
+  local _, err = op(self, 'set', k, v, 'ex', ms)
   if err then
     return err
   end
