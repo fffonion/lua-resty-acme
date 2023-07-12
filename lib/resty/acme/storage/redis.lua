@@ -105,7 +105,7 @@ function _M:add(k, v, ttl)
   end
   if err then
     return err
-  elseif ok == nil then
+  elseif ok == ngx.null then
     return "exists"
   end
 end
