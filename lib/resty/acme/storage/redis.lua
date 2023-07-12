@@ -105,7 +105,7 @@ function _M:add(k, v, ttl)
   end
   if err then
     return err
-  elseif ok == 0 then
+  elseif ok == nil then
     return "exists"
   end
 end
