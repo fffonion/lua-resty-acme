@@ -95,34 +95,33 @@ local function remove_namespace(namespace, keys)
   end
 end
 
--- TODO: use EX/NX flag if we can determine redis version (>=2.6.12)
 function _M:add(k, v, ttl)
   k = self.namespace .. k
-  local ok, err = op(self, 'setnx', k, v)
+  local ms
+  if ttl then
+    ms = math.floor(ttl * 1000)
+  else
+    ms = nil
+  end
+  local ok, err = op(self, 'set', k, v, "nx", ms)
   if err then
     return err
   elseif ok == 0 then
     return "exists"
   end
-  if ttl then
-    local _, err = op(self, 'pexpire', k, math.floor(ttl * 1000))
-    if err then
-      return err
-    end
-  end
 end
 
 function _M:set(k, v, ttl)
   k = self.namespace .. k
-  local _, err = op(self, 'set', k, v)
+  local ms
+  if ttl then
+    ms = math.floor(ttl * 1000)
+  else
+    ms = nil
+  end
+  local _, err = op(self, 'set', k, v, "ex", ttl)
   if err then
     return err
-  end
-  if ttl then
-    local _, err = op(self, 'pexpire', k, math.floor(ttl * 1000))
-    if err then
-      return err
-    end
   end
 end
 
