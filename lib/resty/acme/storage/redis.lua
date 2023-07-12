@@ -114,9 +114,9 @@ function _M:set(k, v, ttl)
   k = self.namespace .. k
   local err, _
   if ttl then
-    _, err = op(self, 'set', k, v, "ex", "px", math.floor(ttl * 1000))
+    _, err = op(self, 'set', k, v, "px", math.floor(ttl * 1000))
   else
-    _, err = op(self, 'set', k, v, "ex")
+    _, err = op(self, 'set', k, v)
   end
   if err then
     return err
