@@ -103,10 +103,10 @@ function _M:add(k, v, ttl)
   else
     ms = nil
   end
-  local ok, err = op(self, 'set', k, v, "nx", ms)
+  local ok, err = op(self, 'set', k, v, 'nx', ms)
   if err then
     return err
-  elseif ok == 0 then
+  elseif ok == nil then
     return "exists"
   end
 end
@@ -119,7 +119,7 @@ function _M:set(k, v, ttl)
   else
     ms = nil
   end
-  local _, err = op(self, 'set', k, v, "ex", ttl)
+  local _, err = op(self, 'set', k, v, 'ex', ttl)
   if err then
     return err
   end
