@@ -97,29 +97,27 @@ end
 
 function _M:add(k, v, ttl)
   k = self.namespace .. k
-  local ms
+  local ok, err
   if ttl then
-    ms = math.floor(ttl * 1000)
+    ok, err = op(self, 'set', k, v, "nx", "px", math.floor(ttl * 1000))
   else
-    ms = nil
+    ok, err = op(self, 'set', k, v, "nx")
   end
-  local ok, err = op(self, 'set', k, v, 'nx', ms)
   if err then
     return err
-  elseif ok == nil then
+  elseif ok == 0 then
     return "exists"
   end
 end
 
 function _M:set(k, v, ttl)
   k = self.namespace .. k
-  local ms
+  local err
   if ttl then
-    ms = math.floor(ttl * 1000)
+    _, err = op(self, 'set', k, v, "ex", "px", math.floor(ttl * 1000))
   else
-    ms = nil
+    _, err = op(self, 'set', k, v, "ex")
   end
-  local _, err = op(self, 'set', k, v, 'ex', ms)
   if err then
     return err
   end
