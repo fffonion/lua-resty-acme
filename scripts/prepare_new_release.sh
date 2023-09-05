@@ -28,11 +28,11 @@ git checkout -b release/${new_v}
 new_rockspec="${old_rockspec/$old_v/$new_v}"
 cp "$old_rockspec" "$new_rockspec"
 git rm "$old_rockspec"
-SED -i "s/$old_v/$new_v/g" "$new_rockspec"
+$SED -i "s/$old_v/$new_v/g" "$new_rockspec"
 git add "$new_rockspec"
 
 # file
-SED -i "s/_VERSION = '$old_v'/_VERSION = '$new_v'/g" lib/resty/acme/client.lua
+$SED -i "s/_VERSION = '$old_v'/_VERSION = '$new_v'/g" lib/resty/acme/client.lua
 git add -u
 
 # changelog
