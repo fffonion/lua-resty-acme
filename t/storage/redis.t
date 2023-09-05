@@ -431,4 +431,128 @@ nil
 --- no_error_log
 [error]
 
+=== TEST 14: Redis list keys with multiple scan calls
+--- http_config eval: $::HttpConfig
+--- config
+    location =/t {
+        content_by_lua_block {
+            local st = test_lib.new(test_cfg)
+            for i=1,50 do
+                local err = st:set(string.format("test14:%02d", i), string.format("value%02d", i))
+                ngx.say(err)
+            end
+
+            local keys, err = st:list("test14")
+            ngx.say(err)
+            table.sort(keys)
+            for _, p in ipairs(keys) do ngx.say(p) end
+        }
+    }
+--- request
+    GET /t
+--- response_body_like eval
+"nil
+nil
+nil
+nil
+nil
+nil
+nil
+nil
+nil
+nil
+nil
+nil
+nil
+nil
+nil
+nil
+nil
+nil
+nil
+nil
+nil
+nil
+nil
+nil
+nil
+nil
+nil
+nil
+nil
+nil
+nil
+nil
+nil
+nil
+nil
+nil
+nil
+nil
+nil
+nil
+nil
+nil
+nil
+nil
+nil
+nil
+nil
+nil
+nil
+nil
+nil
+test14:01
+test14:02
+test14:03
+test14:04
+test14:05
+test14:06
+test14:07
+test14:08
+test14:09
+test14:10
+test14:11
+test14:12
+test14:13
+test14:14
+test14:15
+test14:16
+test14:17
+test14:18
+test14:19
+test14:20
+test14:21
+test14:22
+test14:23
+test14:24
+test14:25
+test14:26
+test14:27
+test14:28
+test14:29
+test14:30
+test14:31
+test14:32
+test14:33
+test14:34
+test14:35
+test14:36
+test14:37
+test14:38
+test14:39
+test14:40
+test14:41
+test14:42
+test14:43
+test14:44
+test14:45
+test14:46
+test14:47
+test14:48
+test14:49
+test14:50
+"
+--- no_error_log
+[error]
 
