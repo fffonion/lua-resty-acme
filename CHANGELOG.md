@@ -2,6 +2,18 @@
 ## [Unreleased]
 
 
+<a name="0.12.0"></a>
+## [0.12.0] - 2023-09-05
+### bug fixes
+- **tests:** use hashicorp published docker images [78eb7bf](https://github.com/fffonion/lua-resty-acme/commit/78eb7bf375834a8161622588dc36702573cafd64)
+
+### features
+- **autossl:** add redis namespace constraint ([#104](https://github.com/fffonion/lua-resty-acme/issues/104)) [7f92be9](https://github.com/fffonion/lua-resty-acme/commit/7f92be931e2da6c03689bb9fc4f40b3d34ca8384)
+
+### performance improvements
+- **storage:** replace redis keys call with scan ([#106](https://github.com/fffonion/lua-resty-acme/issues/106)) [d806c19](https://github.com/fffonion/lua-resty-acme/commit/d806c19602313f80c724ad91d4797c63c826ff13)
+
+
 <a name="0.11.0"></a>
 ## [0.11.0] - 2023-03-24
 ### features
@@ -278,7 +290,8 @@
 - **crypto:** ffi openssl supports generating ec certificates [bc9d989](https://github.com/fffonion/lua-resty-acme/commit/bc9d989b4eb8bfa954f2f1ab08b0449957a27402)
 
 
-[Unreleased]: https://github.com/fffonion/lua-resty-acme/compare/0.11.0...HEAD
+[Unreleased]: https://github.com/fffonion/lua-resty-acme/compare/0.12.0...HEAD
+[0.12.0]: https://github.com/fffonion/lua-resty-acme/compare/0.11.0...0.12.0
 [0.11.0]: https://github.com/fffonion/lua-resty-acme/compare/0.10.1...0.11.0
 [0.10.1]: https://github.com/fffonion/lua-resty-acme/compare/0.10.0...0.10.1
 [0.10.0]: https://github.com/fffonion/lua-resty-acme/compare/0.9.0...0.10.0
