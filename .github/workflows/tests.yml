@@ -30,26 +30,26 @@ jobs:
       matrix:
         include:
         - nginx: "1.21.4"
-          openssl: "1.1.1t"
+          openssl: "1.1.1w"
           lua_nginx_module: "v0.10.21"
           stream_lua_nginx_module: "v0.0.11"
           lua_resty_core: "v0.1.23"
         - nginx: "1.21.4"
-          openssl: "3.0.8"
+          openssl: "3.0.12"
+          lua_nginx_module: "v0.10.21"
+          stream_lua_nginx_module: "v0.0.11"
+          lua_resty_core: "v0.1.23"
+        - nginx: "1.21.4"
+          openssl: "3.1.4"
           lua_nginx_module: "v0.10.21"
           stream_lua_nginx_module: "v0.0.11"
           lua_resty_core: "v0.1.23"
         - nginx: "1.19.9"
-          openssl: "1.1.1t"
+          openssl: "1.1.1w"
           lua_nginx_module: "v0.10.20"
           stream_lua_nginx_module: "v0.0.10"
           lua_resty_core: "v0.1.22"
-        - nginx: "1.19.3"
-          openssl: "1.1.1t"
-          lua_nginx_module: "v0.10.19"
-          stream_lua_nginx_module: "v0.0.9"
-          lua_resty_core: "v0.1.21"
-
+        
     env:
       JOBS: 3
       SH: bash
