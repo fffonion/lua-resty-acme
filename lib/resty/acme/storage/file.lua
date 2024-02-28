@@ -149,7 +149,7 @@ function _M:list(prefix)
     end
 ::nextfile::
   end
-  return files
+  return files, nil
 end
 
 return _M
