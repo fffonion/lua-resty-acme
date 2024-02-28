@@ -314,7 +314,11 @@ function AUTOSSL.check_renew(premature)
     return
   end
 
-  local keys = AUTOSSL.storage:list(domain_cache_key_prefix)
+  local keys, err = AUTOSSL.storage:list(domain_cache_key_prefix)
+  if err then
+    log(ngx_ERR, "failed to get the list of certificates from storage, error: ", err)
+    return
+  end
   for _, key in ipairs(keys) do
     local serialized, err = AUTOSSL.storage:get(key)
     if err or not serialized then

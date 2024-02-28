@@ -152,7 +152,7 @@ function _M:list(prefix)
       end
     end
   end
-  return ret
+  return ret, nil
 end
 
 return _M

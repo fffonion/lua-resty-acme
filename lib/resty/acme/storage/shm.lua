@@ -51,7 +51,7 @@ function _M:list(prefix)
       end
     end
   end
-  return keys
+  return keys, nil
 end
 
 return _M
