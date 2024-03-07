@@ -58,6 +58,10 @@ local default_config = {
   challenge_start_delay = 0,
   -- if true, the request to nginx waits until the cert has been generated and it is used right away
   blocking = false,
+  domain_owner = nil,
+  domain_registrar_token = {
+    dynv6 = nil,
+  },
 }
 
 local domain_pkeys = {}
@@ -371,6 +375,8 @@ function AUTOSSL.init(autossl_config, acme_config)
 
   acme_config.storage_adapter = autossl_config.storage_adapter
   acme_config.storage_config = autossl_config.storage_config
+  acme_config.domain_owner = autossl_config.domain_owner
+  acme_config.domain_registrar_token = autossl_config.domain_registrar_token
 
   if acme_config.storage_adapter == "resty.acme.storage.redis" and
     acme_config.storage_config.namespace then
