@@ -511,6 +511,25 @@ function AUTOSSL.is_domain_whitelisted(domain, is_new_cert_needed)
   end
 end
 
+local function find_wildcard_domain(domain)
+  if not domain_whitelist then
+    return nil
+  end
+
+  for w, _ in pairs(domain_whitelist) do
+    local is_wildcard, _, err  = w:find("*.", 1, true)
+    if is_wildcard then
+      local trim_w = w:gsub("*.", "")
+      local is_matched, _, err = domain:find(trim_w, 1, true)
+      if is_matched and domain ~= trim_w then
+        return w
+      end
+    end
+  end
+
+  return nil
+end
+
 function AUTOSSL.ssl_certificate()
   local domain, err = ssl.server_name()
 
@@ -522,8 +541,12 @@ function AUTOSSL.ssl_certificate()
   domain = string.lower(domain)
 
   if not AUTOSSL.is_domain_whitelisted(domain, false) then
-    log(ngx_INFO, "domain ", domain, " not in whitelist, skipping")
-    return
+    local matched_wildcard_domain = find_wildcard_domain(domain)
+    if not matched_wildcard_domain then
+      log(ngx_INFO, "domain ", domain, " not in whitelist, skipping")
+      return
+    end
+    domain = matched_wildcard_domain
   end
 
   local chains_set_count = 0

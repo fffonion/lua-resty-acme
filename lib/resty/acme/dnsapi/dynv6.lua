@@ -1,8 +1,6 @@
 local http = require("resty.http")
 local cjson = require("cjson")
 local json = cjson.new()
-local find = string.find
-local gsub = string.gsub
 
 local _M = {}
 local mt = {__index = _M}
@@ -50,7 +48,7 @@ function _M:get_zone_id(fqdn)
     -- }]
     local body = json.decode(resp.body)
     for _, zone in ipairs(body) do
-      local start,_, err = fqdn:find(zone.name, 1, true)
+      local start, _, err = fqdn:find(zone.name, 1, true)
       if err then
         return nil, err
       end
