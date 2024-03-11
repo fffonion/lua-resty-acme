@@ -1,7 +1,6 @@
 local util = require("resty.acme.util")
 local digest = require("resty.openssl.digest")
 local base64 = require("ngx.base64")
-local gsub = string.gsub
 local log = util.log
 local encode_base64url = base64.encode_base64url
 
@@ -11,8 +10,9 @@ local mt = {__index = _M}
 function _M.new(storage)
   local self = setmetatable({
     storage = storage,
-    domain_owner = nil,
-    domain_registrar_token = {
+    dnsapi_provider = nil,
+    dnsapi_token = {
+      cloudflare = nil,
       dynv6 = nil,
     },
   }, mt)
@@ -30,29 +30,29 @@ local function ch_key(challenge)
   return challenge .. "#dns-01"
 end
 
-function _M:update_domain_info(domain_owner, domain_registrar_token)
-  self.domain_owner = domain_owner
-  self.domain_registrar_token = domain_registrar_token
+function _M:update_domain_info(dnsapi_provider, dnsapi_token)
+  self.dnsapi_provider = dnsapi_provider
+  self.dnsapi_token = dnsapi_token
 end
 
 function _M:update_dnsapi(domain)
-  local owner = self.domain_owner[domain]
-  log(ngx.DEBUG, "update_dnsapi returns: ", owner)
-  if not owner then
-    return nil, "no dns registrar"
+  local provider = self.dnsapi_provider[domain]
+  log(ngx.DEBUG, "found dnsapi provider: ", provider)
+  if not provider then
+    return nil, "no dnsapi provider found"
   end
-  local token = self.domain_registrar_token[owner]
+  local token = self.dnsapi_token[provider]
   if not token then
-    return nil, "no token for dns registrar"
+    return nil, "no api token for current dnsapi"
   end
-  local ok, module = pcall(require, "resty.acme.dnsapi." .. owner)
+  local ok, module = pcall(require, "resty.acme.dnsapi." .. provider)
   if ok then
     local handler, err = module.new(token)
     if not err then
       return handler
     end
   end
-  return nil, "require dnsapi error:" .. owner
+  return nil, "require dnsapi error: " .. provider
 end
 
 function _M:register_challenge(_, response, domains)
@@ -67,12 +67,12 @@ function _M:register_challenge(_, response, domains)
     if err then
       return err
     end
-    local trim_domain = gsub(domain, "*.", "")
+    local trim_domain = domain:gsub("*.", "")
     local result, err = dnsapi:post_txt_record("_acme-challenge." .. trim_domain, txt_record)
+    log(ngx.DEBUG, "dnsapi post_txt_record returns: ", result)
     if err then
       return err
     end
-    log(ngx.DEBUG, "dnsapi returns: ", result)
   end
 end
 
@@ -87,12 +87,12 @@ function _M:cleanup_challenge(_--[[challenge]], domains)
     if err then
       return err
     end
-    local trim_domain = gsub(domain, "*.", "")
+    local trim_domain = domain:gsub("*.", "")
     local result, err = dnsapi:delete_txt_record("_acme-challenge." .. trim_domain)
+    log(ngx.DEBUG, "dnsapi delete_txt_record returns: ", result)
     if err then
       return err
     end
-    log(ngx.DEBUG, "dnsapi returns: ", result)
   end
 end
 

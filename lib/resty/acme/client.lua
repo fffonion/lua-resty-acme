@@ -54,8 +54,9 @@ local default_config = {
   preferred_chain = nil,
   -- callback function that allows to wait before signaling ACME server to validate
   challenge_start_callback = nil,
-  domain_owner = nil,
-  domain_registrar_token = {
+  dnsapi_provider = nil,
+  dnsapi_token = {
+    cloudflare = nil,
     dynv6 = nil,
   },
 }
@@ -95,8 +96,8 @@ function _M.new(conf)
       eab_kid = conf.eab_kid,
       eab_hmac_key = decode_base64url(conf.eab_hmac_key),
       challenge_handlers = {},
-      domain_owner = conf.domain_owner,
-      domain_registrar_token = conf.domain_registrar_token,
+      dnsapi_provider = conf.dnsapi_provider,
+      dnsapi_token = conf.dnsapi_token,
     }, mt
   )
 
@@ -580,7 +581,7 @@ function _M:order_certificate(domain_key, ...)
         log(ngx_DEBUG, "challenge ", typ, ": ", challenge.token, " is ", challenge.status, ", skipping")
       elseif self.challenge_handlers[typ] then
         if typ == "dns-01" then
-          self.challenge_handlers[typ]:update_domain_info(self.domain_owner, self.domain_registrar_token)
+          self.challenge_handlers[typ]:update_domain_info(self.dnsapi_provider, self.dnsapi_token)
         end
         local err = self.challenge_handlers[typ]:register_challenge(
           challenge.token,

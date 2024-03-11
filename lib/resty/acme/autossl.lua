@@ -58,8 +58,9 @@ local default_config = {
   challenge_start_delay = 0,
   -- if true, the request to nginx waits until the cert has been generated and it is used right away
   blocking = false,
-  domain_owner = nil,
-  domain_registrar_token = {
+  dnsapi_provider = nil,
+  dnsapi_token = {
+    cloudflare = nil,
     dynv6 = nil,
   },
 }
@@ -375,8 +376,6 @@ function AUTOSSL.init(autossl_config, acme_config)
 
   acme_config.storage_adapter = autossl_config.storage_adapter
   acme_config.storage_config = autossl_config.storage_config
-  acme_config.domain_owner = autossl_config.domain_owner
-  acme_config.domain_registrar_token = autossl_config.domain_registrar_token
 
   if acme_config.storage_adapter == "resty.acme.storage.redis" and
     acme_config.storage_config.namespace then
@@ -404,6 +403,15 @@ function AUTOSSL.init(autossl_config, acme_config)
   end
   acme_config.account_email = autossl_config.account_email
   acme_config.enabled_challenge_handlers = autossl_config.enabled_challenge_handlers
+
+  for _, challenge in ipairs(acme_config.enabled_challenge_handlers) do
+    if challenge == "dns-01" and autossl_config.dnsapi_provider ~= nil then
+      acme_config.dnsapi_provider = autossl_config.dnsapi_provider
+      acme_config.dnsapi_token = autossl_config.dnsapi_token
+    else
+      error("dnsapi_provider must be set when enabled dns-01 challenge")
+    end
+  end
 
   acme_config.challenge_start_callback = function()
     ngx.sleep(autossl_config.challenge_start_delay)
@@ -516,7 +524,6 @@ local function find_wildcard_domain(domain)
     return nil
   end
 
-  local w
   for _, w in ipairs(domain_whitelist) do
     local is_wildcard, _, err  = w:find("*.", 1, true)
     if is_wildcard then

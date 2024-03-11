@@ -1,6 +1,5 @@
 local http = require("resty.http")
 local cjson = require("cjson")
-local json = cjson.new()
 
 local _M = {}
 local mt = {__index = _M}
@@ -47,7 +46,11 @@ function _M:get_zone_id(fqdn)
     --  "createdAt":"2022-08-14T17:32:57+02:00",
     --  "updatedAt":"2022-08-14T17:32:57+02:00"
     -- }]
-    local body = json.decode(resp.body)
+    local body = cjson.decode(resp.body)
+    if not body then
+      return nil, "json decode error"
+    end
+
     for _, zone in ipairs(body) do
       local start, _, err = fqdn:find(zone.name, 1, true)
       if err then
@@ -114,7 +117,11 @@ function _M:get_record_id(zone_id, fqdn)
     --   "id":1,
     --   "zoneID":1
     -- }]
-    local body = json.decode(resp.body)
+    local body = cjson.decode(resp.body)
+    if not body then
+      return nil, "json decode error"
+    end
+
     for _, record in ipairs(body) do
       local start, theend, err = fqdn:find(record.name, 1, true)
       if err then
