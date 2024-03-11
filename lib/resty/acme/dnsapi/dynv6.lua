@@ -70,7 +70,7 @@ function _M:post_txt_record(fqdn, content)
   local url = "https://dynv6.com/api/v2/zones/" .. zone_id .. "/records"
   local body = {
     ["type"] = "TXT",
-    ["name"] = gsub(fqdn, "." .. self.zone, ""),
+    ["name"] = fqdn:gsub("." .. self.zone, ""),
     ["data"] = content
   }
   local resp, err = self.httpc:request_uri(url,

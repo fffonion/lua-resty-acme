@@ -516,7 +516,8 @@ local function find_wildcard_domain(domain)
     return nil
   end
 
-  for w, _ in pairs(domain_whitelist) do
+  local w
+  for _, w in ipairs(domain_whitelist) do
     local is_wildcard, _, err  = w:find("*.", 1, true)
     if is_wildcard then
       local trim_w = w:gsub("*.", "")
