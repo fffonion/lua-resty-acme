@@ -11,7 +11,7 @@ function _M.new(token)
   end
 
   local self = setmetatable({
-    endpoint = "https://dynv6.com/api/v2",
+    endpoint = "https://api.cloudflare.com/client/v4",
     httpc = nil,
     token = token,
     zone = nil,
@@ -39,16 +39,20 @@ function _M:get_zone_id(fqdn)
 
   if resp and resp.status == 200 then
     -- expamle body:
-    -- [{
-    --  "name":"domain.dynv6.net",
-    --  "ipv4address":"",
-    --  "ipv6prefix":"",
-    --  "id":1,
-    --  "createdAt":"2022-08-14T17:32:57+02:00",
-    --  "updatedAt":"2022-08-14T17:32:57+02:00"
-    -- }]
+    -- {
+    --   "result":
+    --     [{
+    --       "id":"12345abcde",
+    --       "name":"domain.com",
+    --       ...
+    --     }],
+    --   "result_info":{"page":1,"per_page":20,"total_pages":1,"count":1,"total_count":1},
+    --   "success":true,
+    --   "errors":[],
+    --   "messages":[]
+    -- }
     local body = json.decode(resp.body)
-    for _, zone in ipairs(body) do
+    for _, zone in ipairs(body.result) do
       local start, _, err = fqdn:find(zone.name, 1, true)
       if err then
         return nil, err
@@ -68,11 +72,11 @@ function _M:post_txt_record(fqdn, content)
   if err then
     return nil, err
   end
-  local url = self.endpoint .. "/zones/" .. zone_id .. "/records"
+  local url = self.endpoint .. "/zones/" .. zone_id .. "/dns_records"
   local body = {
     ["type"] = "TXT",
-    ["name"] = fqdn:gsub("." .. self.zone, ""),
-    ["data"] = content
+    ["name"] = fqdn,
+    ["content"] = content
   }
   local resp, err = self.httpc:request_uri(url,
     {
@@ -89,7 +93,7 @@ function _M:post_txt_record(fqdn, content)
 end
 
 function _M:get_record_id(zone_id, fqdn)
-  local url = self.endpoint .. "/zones/" .. zone_id .. "/records"
+  local url = self.endpoint .. "/zones/" .. zone_id .. "/dns_records"
   local resp, err = self.httpc:request_uri(url,
     {
       method = "GET",
@@ -102,25 +106,25 @@ function _M:get_record_id(zone_id, fqdn)
 
   if resp and resp.status == 200 then
     -- expamle body:
-    -- [{
-    --   "type":"TXT",
-    --   "name":"_acme-challenge",
-    --   "data":"record_content",
-    --   "priority":null,
-    --   "flags":null,
-    --   "tag":null,
-    --   "weight":null,
-    --   "port":null,
-    --   "id":1,
-    --   "zoneID":1
-    -- }]
+    -- {
+    --   "result":
+    --     [{
+    --       "id":"12345abcdefghti",
+    --       "zone_id":"12345abcde",
+    --       "zone_name":"domain.com",
+    --       "name":"_acme-challenge.domain.com",
+    --       "type":"TXT",
+    --       "content":"record_content",
+    --       ...
+    --     }],
+    --   "success":true,
+    --   "errors":[],
+    --   "messages":[],
+    --   "result_info":{"page":1,"per_page":100,"count":1,"total_count":1,"total_pages":1}
+    -- }
     local body = json.decode(resp.body)
-    for _, record in ipairs(body) do
-      local start, theend, err = fqdn:find(record.name, 1, true)
-      if err then
-        return nil, err
-      end
-      if start then
+    for _, record in ipairs(body.result) do
+      if fqdn == record.name then
         return record.id
       end
     end
@@ -135,7 +139,7 @@ function _M:delete_txt_record(fqdn)
     return nil, err
   end
   local record_id, err = self:get_record_id(zone_id, fqdn)
-  local url = self.endpoint .. "/zones/" .. zone_id .. "/records/" .. record_id
+  local url = self.endpoint .. "/zones/" .. zone_id .. "/dns_records/" .. record_id
   local resp, err = self.httpc:request_uri(url,
     {
       method = "DELETE",
@@ -145,7 +149,8 @@ function _M:delete_txt_record(fqdn)
   if err then
     return nil, err
   end
-  -- return 204 not content
+
+  -- return 200 ok
   return resp.status
 end
 
