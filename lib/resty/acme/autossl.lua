@@ -403,15 +403,8 @@ function AUTOSSL.init(autossl_config, acme_config)
   end
   acme_config.account_email = autossl_config.account_email
   acme_config.enabled_challenge_handlers = autossl_config.enabled_challenge_handlers
-
-  for _, challenge in ipairs(acme_config.enabled_challenge_handlers) do
-    if challenge == "dns-01" and autossl_config.dnsapi_provider ~= nil then
-      acme_config.dnsapi_provider = autossl_config.dnsapi_provider
-      acme_config.dnsapi_token = autossl_config.dnsapi_token
-    else
-      error("dnsapi_provider must be set when enabled dns-01 challenge")
-    end
-  end
+  acme_config.dnsapi_provider = autossl_config.dnsapi_provider
+  acme_config.dnsapi_token = autossl_config.dnsapi_token
 
   acme_config.challenge_start_callback = function()
     ngx.sleep(autossl_config.challenge_start_delay)

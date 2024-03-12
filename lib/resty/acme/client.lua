@@ -121,6 +121,13 @@ function _M.new(conf)
   for _, c in ipairs(conf.enabled_challenge_handlers) do
     local handler = require("resty.acme.challenge." .. c)
     self.challenge_handlers[c] = handler.new(self.storage)
+    if c == "dns-01" then
+      if self.dnsapi_provider == nil then
+        return nil, "dnsapi_provider must be set when enabled dns-01 challenge"
+      else
+        self.challenge_handlers[c]:update_domain_info(self.dnsapi_provider, self.dnsapi_token)
+      end
+    end
   end
 
   if conf.account_key then
@@ -580,9 +587,6 @@ function _M:order_certificate(domain_key, ...)
         end
         log(ngx_DEBUG, "challenge ", typ, ": ", challenge.token, " is ", challenge.status, ", skipping")
       elseif self.challenge_handlers[typ] then
-        if typ == "dns-01" then
-          self.challenge_handlers[typ]:update_domain_info(self.dnsapi_provider, self.dnsapi_token)
-        end
         local err = self.challenge_handlers[typ]:register_challenge(
           challenge.token,
           challenge.token .. "." .. self.account_thumbprint,
