@@ -58,6 +58,7 @@ local default_config = {
   challenge_start_delay = 0,
   -- if true, the request to nginx waits until the cert has been generated and it is used right away
   blocking = false,
+  enabled_delete_not_whitelisted_domain = false,
 }
 
 local domain_pkeys = {}
@@ -332,10 +333,19 @@ function AUTOSSL.check_renew(premature)
       goto continue
     end
 
+    local domain = deserialized.domain
+    if not AUTOSSL.is_domain_whitelisted(domain, true) and AUTOSSL.config.enabled_delete_not_whitelisted_domain then
+      local err = AUTOSSL.storage:delete(key)
+      if err then
+        log(ngx_ERR, "failed to delete certificate for ", domain, " error: ", err)
+      end
+      log(ngx_INFO, "successfully delete certificate for domain ", domain)
+      goto continue
+    end
+
     local cert = openssl.x509.new(deserialized.cert)
     local _, not_after = cert:get_lifetime()
     if not_after - now < AUTOSSL.config.renew_threshold then
-      local domain = deserialized.domain
       local err = AUTOSSL.update_cert({
         domain = domain,
         renew = true,
