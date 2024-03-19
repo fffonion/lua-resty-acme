@@ -338,8 +338,9 @@ function AUTOSSL.check_renew(premature)
       local err = AUTOSSL.storage:delete(key)
       if err then
         log(ngx_ERR, "failed to delete certificate for ", domain, " error: ", err)
+      else
+        log(ngx_INFO, "successfully delete certificate for domain ", domain)
       end
-      log(ngx_INFO, "successfully delete certificate for domain ", domain)
       goto continue
     end
 
