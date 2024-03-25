@@ -335,7 +335,6 @@ function AUTOSSL.check_renew(premature)
 
     local domain = deserialized.domain
     if not AUTOSSL.is_domain_whitelisted(domain, true) then
-      log(ngx_INFO, "domain ", domain, " not in whitelist, skipping")
       if AUTOSSL.config.enabled_delete_not_whitelisted_domain then
         local err = AUTOSSL.storage:delete(key)
         if err then
@@ -343,6 +342,8 @@ function AUTOSSL.check_renew(premature)
         else
           log(ngx_INFO, "successfully delete certificate for domain ", domain)
         end
+      else
+        log(ngx_INFO, "domain ", domain, " not in whitelist but exists in storage, skipping renewal")
       end
       goto continue
     end
