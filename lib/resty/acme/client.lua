@@ -23,7 +23,7 @@ local wait_backoff_series = {1, 1, 2, 3, 5, 8, 13, 21}
 local TEST_TRY_NONCE_INFINITELY = not not os.getenv("TEST_TRY_NONCE_INFINITELY")
 
 local _M = {
-  _VERSION = '0.12.0'
+  _VERSION = '0.13.0'
 }
 local mt = {__index = _M}
 

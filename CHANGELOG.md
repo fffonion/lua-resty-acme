@@ -2,6 +2,15 @@
 ## [Unreleased]
 
 
+<a name="0.13.0"></a>
+## [0.13.0] - 2024-03-28
+### bug fixes
+- **autossl:** log the errors on the list certificates request ([#110](https://github.com/fffonion/lua-resty-acme/issues/110)) [6c9760f](https://github.com/fffonion/lua-resty-acme/commit/6c9760f21d38fccd7971a70019afc5fe1fc6f1be)
+
+### features
+- **autossl:** add option to delete none whitelisted domains in certificate renewal ([#112](https://github.com/fffonion/lua-resty-acme/issues/112)) [1bbf39c](https://github.com/fffonion/lua-resty-acme/commit/1bbf39c84de90a54a3f61b3ee2e331e613eb5e7a)
+
+
 <a name="0.12.0"></a>
 ## [0.12.0] - 2023-09-05
 ### bug fixes
@@ -290,7 +299,8 @@
 - **crypto:** ffi openssl supports generating ec certificates [bc9d989](https://github.com/fffonion/lua-resty-acme/commit/bc9d989b4eb8bfa954f2f1ab08b0449957a27402)
 
 
-[Unreleased]: https://github.com/fffonion/lua-resty-acme/compare/0.12.0...HEAD
+[Unreleased]: https://github.com/fffonion/lua-resty-acme/compare/0.13.0...HEAD
+[0.13.0]: https://github.com/fffonion/lua-resty-acme/compare/0.12.0...0.13.0
 [0.12.0]: https://github.com/fffonion/lua-resty-acme/compare/0.11.0...0.12.0
 [0.11.0]: https://github.com/fffonion/lua-resty-acme/compare/0.10.1...0.11.0
 [0.10.1]: https://github.com/fffonion/lua-resty-acme/compare/0.10.0...0.10.1
