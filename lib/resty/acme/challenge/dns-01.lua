@@ -10,19 +10,15 @@ local mt = {__index = _M}
 function _M.new(storage)
   local self = setmetatable({
     storage = storage,
-    dnsapi_provider = nil,
-    dnsapi_token = {
-      cloudflare = nil,
-      dynv6 = nil,
-    },
+    domain_auth_info = nil
   }, mt)
   return self
 end
 
-local function compute_txt_record(keyauthorization)
+local function calculate_txt_record(keyauthorization)
   local dgst = assert(digest.new("sha256"):final(keyauthorization))
   local txt_record = encode_base64url(dgst)
-  log(ngx.DEBUG, "computed txt record: ", txt_record)
+  log(ngx.DEBUG, "calculate txt record: ", txt_record)
   return txt_record
 end
 
@@ -30,24 +26,23 @@ local function ch_key(challenge)
   return challenge .. "#dns-01"
 end
 
-function _M:update_domain_info(dnsapi_provider, dnsapi_token)
-  self.dnsapi_provider = dnsapi_provider
-  self.dnsapi_token = dnsapi_token
+function _M:update_domain_auth_info(domain_auth_info)
+  self.domain_auth_info = domain_auth_info
 end
 
-function _M:update_dnsapi(domain)
-  local provider = self.dnsapi_provider[domain]
-  log(ngx.DEBUG, "found dnsapi provider: ", provider)
+local function choose_dnsapi(self, domain)
+  local provider = self.domain_auth_info[domain].provider
+  log(ngx.DEBUG, "use dnsapi provider: ", provider)
   if not provider then
-    return nil, "no dnsapi provider found"
+    return nil, "dnsapi provider not found"
   end
-  local token = self.dnsapi_token[provider]
-  if not token then
-    return nil, "no api token for current dnsapi"
+  local content = self.domain_auth_info[domain].content
+  if not content then
+    return nil, "dnsapi auth info not found"
   end
   local ok, module = pcall(require, "resty.acme.dnsapi." .. provider)
   if ok then
-    local handler, err = module.new(token)
+    local handler, err = module.new(content)
     if not err then
       return handler
     end
@@ -62,8 +57,8 @@ function _M:register_challenge(_, response, domains)
     if err then
       return err
     end
-    local txt_record = compute_txt_record(response)
-    local dnsapi, err = self:update_dnsapi(domain)
+    local txt_record = calculate_txt_record(response)
+    local dnsapi, err = choose_dnsapi(self, domain)
     if err then
       return err
     end
@@ -83,7 +78,7 @@ function _M:cleanup_challenge(_--[[challenge]], domains)
     if err then
       return err
     end
-    local dnsapi, err = self:update_dnsapi(domain)
+    local dnsapi, err = choose_dnsapi(self, domain)
     if err then
       return err
     end

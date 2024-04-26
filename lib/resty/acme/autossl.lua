@@ -58,11 +58,17 @@ local default_config = {
   challenge_start_delay = 0,
   -- if true, the request to nginx waits until the cert has been generated and it is used right away
   blocking = false,
-  dnsapi_provider = nil,
-  dnsapi_token = {
-    cloudflare = nil,
-    dynv6 = nil,
-  },
+  domain_dnsapi = nil,
+  dnsapi_auth_info = {
+    cloudflare_token_default = {
+      provider = "cloudflare",
+      content = ""
+    },
+    dynv6_token_default = {
+      provider = "dynv6",
+      content = ""
+    }
+  }
 }
 
 local domain_pkeys = {}
@@ -403,8 +409,12 @@ function AUTOSSL.init(autossl_config, acme_config)
   end
   acme_config.account_email = autossl_config.account_email
   acme_config.enabled_challenge_handlers = autossl_config.enabled_challenge_handlers
-  acme_config.dnsapi_provider = autossl_config.dnsapi_provider
-  acme_config.dnsapi_token = autossl_config.dnsapi_token
+  for domain, auth_name in pairs(autossl_config.domain_dnsapi) do
+    if autossl_config.dnsapi_auth_info[auth_name].content != "" then
+      acme_config.domain_auth_info[domain] = autossl_config.dnsapi_auth_info[auth_name]
+    end
+  end
+  log(ngx_DEBUG, "update acme_config.domain_auth_info: " .. json.encode(acme_config.domain_auth_info))
 
   acme_config.challenge_start_callback = function()
     ngx.sleep(autossl_config.challenge_start_delay)
