@@ -20,7 +20,7 @@ function _M.new(storage)
     --     content = "token"
     --   }
     -- }
-    domain_auth_info = nil
+    domain_auth_info = {}
   }, mt)
   return self
 end
@@ -37,6 +37,9 @@ local function ch_key(challenge)
 end
 
 local function choose_dnsapi(self, domain)
+  if not self.domain_auth_info[domain] then
+    return nil, "domain auth info not found"
+  end
   local provider = self.domain_auth_info[domain].provider
   log(ngx.DEBUG, "use dnsapi provider: ", provider)
   if not provider then

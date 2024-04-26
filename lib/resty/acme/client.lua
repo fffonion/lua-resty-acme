@@ -64,7 +64,7 @@ local default_config = {
   --     content = "token"
   --   }
   -- }
-  domain_auth_info = nil
+  domain_auth_info = {}
 }
 
 local function new_httpc()

@@ -81,7 +81,7 @@ function _M:post_txt_record(fqdn, content)
     {
       method = "POST",
       headers = self.headers,
-      body = json.encode(body)
+      body = cjson.encode(body)
     }
   )
   if err then

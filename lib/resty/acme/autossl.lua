@@ -60,7 +60,7 @@ local default_config = {
   blocking = false,
   enabled_delete_not_whitelisted_domain = false,
   -- domain_dnsapi = { ["*.domain.com"] = "cloudflare_token_default", ["www.domain.com"] = "dynv6_token_default" }
-  domain_dnsapi = nil,
+  domain_dnsapi = {},
   dnsapi_auth_info = {
     cloudflare_token_default = {
       provider = "cloudflare",
@@ -425,12 +425,15 @@ function AUTOSSL.init(autossl_config, acme_config)
   end
   acme_config.account_email = autossl_config.account_email
   acme_config.enabled_challenge_handlers = autossl_config.enabled_challenge_handlers
-  for domain, auth_name in pairs(autossl_config.domain_dnsapi) do
-    if autossl_config.dnsapi_auth_info[auth_name].content != "" then
-      acme_config.domain_auth_info[domain] = autossl_config.dnsapi_auth_info[auth_name]
+  if autossl_config.domain_dnsapi then
+    acme_config.domain_auth_info = {}
+    for domain, auth_name in pairs(autossl_config.domain_dnsapi) do
+      if autossl_config.dnsapi_auth_info[auth_name].content ~= "" then
+        acme_config.domain_auth_info[domain] = autossl_config.dnsapi_auth_info[auth_name]
+      end
     end
+    log(ngx_DEBUG, "update acme_config.domain_auth_info: " .. json.encode(acme_config.domain_auth_info))
   end
-  log(ngx_DEBUG, "update acme_config.domain_auth_info: " .. json.encode(acme_config.domain_auth_info))
 
   acme_config.challenge_start_callback = function()
     ngx.sleep(autossl_config.challenge_start_delay)
