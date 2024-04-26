@@ -10,6 +10,16 @@ local mt = {__index = _M}
 function _M.new(storage)
   local self = setmetatable({
     storage = storage,
+    -- domain_auth_info = {
+    --   ["*.domain.com"] = {
+    --     provider = "cloudflare",
+    --     content = "token"
+    --   },
+    --   ["www.domain.com"] = {
+    --     provider = "dynv6",
+    --     content = "token"
+    --   }
+    -- }
     domain_auth_info = nil
   }, mt)
   return self
@@ -24,10 +34,6 @@ end
 
 local function ch_key(challenge)
   return challenge .. "#dns-01"
-end
-
-function _M:update_domain_auth_info(domain_auth_info)
-  self.domain_auth_info = domain_auth_info
 end
 
 local function choose_dnsapi(self, domain)
@@ -48,6 +54,10 @@ local function choose_dnsapi(self, domain)
     end
   end
   return nil, "require dnsapi error: " .. provider
+end
+
+function _M:update_domain_auth_info(domain_auth_info)
+  self.domain_auth_info = domain_auth_info
 end
 
 function _M:register_challenge(_, response, domains)

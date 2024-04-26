@@ -54,6 +54,16 @@ local default_config = {
   preferred_chain = nil,
   -- callback function that allows to wait before signaling ACME server to validate
   challenge_start_callback = nil,
+  -- domain_auth_info = {
+  --   ["*.domain.com"] = {
+  --     provider = "cloudflare",
+  --     content = "token"
+  --   },
+  --   ["www.domain.com"] = {
+  --     provider = "dynv6",
+  --     content = "token"
+  --   }
+  -- }
   domain_auth_info = nil
 }
 

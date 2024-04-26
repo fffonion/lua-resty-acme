@@ -59,6 +59,7 @@ local default_config = {
   -- if true, the request to nginx waits until the cert has been generated and it is used right away
   blocking = false,
   enabled_delete_not_whitelisted_domain = false,
+  -- domain_dnsapi = { ["*.domain.com"] = "cloudflare_token_default", ["www.domain.com"] = "dynv6_token_default" }
   domain_dnsapi = nil,
   dnsapi_auth_info = {
     cloudflare_token_default = {
