@@ -54,7 +54,8 @@ local default_config = {
   preferred_chain = nil,
   -- callback function that allows to wait before signaling ACME server to validate
   challenge_start_callback = nil,
-  -- domain_auth_info = {
+  -- the domain used dnsapi key detail for dns-01 challenge
+  -- like: domain_used_dnsapi_key_detail = {
   --   ["*.domain.com"] = {
   --     provider = "cloudflare",
   --     content = "token"
@@ -64,7 +65,7 @@ local default_config = {
   --     content = "token"
   --   }
   -- }
-  domain_auth_info = {}
+  domain_used_dnsapi_key_detail = {}
 }
 
 local function new_httpc()
@@ -102,7 +103,7 @@ function _M.new(conf)
       eab_kid = conf.eab_kid,
       eab_hmac_key = decode_base64url(conf.eab_hmac_key),
       challenge_handlers = {},
-      domain_auth_info = conf.domain_auth_info
+      domain_used_dnsapi_key_detail = conf.domain_used_dnsapi_key_detail
     }, mt
   )
 
@@ -127,11 +128,10 @@ function _M.new(conf)
     local handler = require("resty.acme.challenge." .. c)
     self.challenge_handlers[c] = handler.new(self.storage)
     if c == "dns-01" then
-      if self.domain_auth_info == nil then
-        return nil, "domain_auth_info should not be nil when enabled dns-01 challenge"
-      else
-        self.challenge_handlers[c]:update_domain_auth_info(self.domain_auth_info)
+      if self.domain_used_dnsapi_key_detail == nil then
+        return nil, "domain_used_dnsapi_key_detail should not be nil when enabled dns-01 challenge"
       end
+      self.challenge_handlers[c]:update_dnsapi_info(self.domain_used_dnsapi_key_detail)
     end
   end
 

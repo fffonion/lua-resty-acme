@@ -59,11 +59,14 @@ local default_config = {
   -- if true, the request to nginx waits until the cert has been generated and it is used right away
   blocking = false,
   enabled_delete_not_whitelisted_domain = false,
-  -- domain_dnsapi = { ["*.domain.com"] = "cloudflare_token_default", ["www.domain.com"] = "dynv6_token_default" }
-  domain_dnsapi = {},
-  dnsapi_auth_info = {
+  -- the maps of domain and dnsapi keys
+  -- like: domain_used_dnsapi_key = { ["*.domain.com"] = "cloudflare_token_default", ["www.domain.com"] = "dynv6_token_default" }
+  domain_used_dnsapi_key = {},
+  dnsapi_keys = {
     cloudflare_token_default = {
+      -- the module name in 'lib/resty/acme/dnsapi'
       provider = "cloudflare",
+      -- the api token
       content = ""
     },
     dynv6_token_default = {
@@ -425,14 +428,12 @@ function AUTOSSL.init(autossl_config, acme_config)
   end
   acme_config.account_email = autossl_config.account_email
   acme_config.enabled_challenge_handlers = autossl_config.enabled_challenge_handlers
-  if autossl_config.domain_dnsapi then
-    acme_config.domain_auth_info = {}
-    for domain, auth_name in pairs(autossl_config.domain_dnsapi) do
-      if autossl_config.dnsapi_auth_info[auth_name].content ~= "" then
-        acme_config.domain_auth_info[domain] = autossl_config.dnsapi_auth_info[auth_name]
-      end
+
+  acme_config.domain_used_dnsapi_key_detail = acme_config.domain_used_dnsapi_key_detail or {}
+  for domain, key_name in pairs(autossl_config.domain_used_dnsapi_key) do
+    if autossl_config.dnsapi_keys[key_name].content ~= "" then
+      acme_config.domain_used_dnsapi_key_detail[domain] = autossl_config.dnsapi_keys[key_name]
     end
-    log(ngx_DEBUG, "update acme_config.domain_auth_info: " .. json.encode(acme_config.domain_auth_info))
   end
 
   acme_config.challenge_start_callback = function()
