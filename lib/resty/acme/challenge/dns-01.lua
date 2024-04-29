@@ -66,13 +66,13 @@ function _M:update_dnsapi_info(domain_used_dnsapi_key_detail)
 end
 
 function _M:register_challenge(_, response, domains)
-  local err
+  local dnsapi, err
   for _, domain in ipairs(domains) do
     err = self.storage:set(ch_key(domain), response, 3600)
     if err then
       return err
     end
-    local dnsapi, err = choose_dnsapi(self, domain)
+    dnsapi, err = choose_dnsapi(self, domain)
     if err then
       return err
     end
@@ -87,13 +87,13 @@ function _M:register_challenge(_, response, domains)
 end
 
 function _M:cleanup_challenge(_--[[challenge]], domains)
-  local err
+  local dnsapi, err
   for _, domain in ipairs(domains) do
     err = self.storage:delete(ch_key(domain))
     if err then
       return err
     end
-    local dnsapi, err = choose_dnsapi(self, domain)
+    dnsapi, err = choose_dnsapi(self, domain)
     if err then
       return err
     end

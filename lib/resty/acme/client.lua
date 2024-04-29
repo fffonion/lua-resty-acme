@@ -128,9 +128,6 @@ function _M.new(conf)
     local handler = require("resty.acme.challenge." .. c)
     self.challenge_handlers[c] = handler.new(self.storage)
     if c == "dns-01" then
-      if self.domain_used_dnsapi_key_detail == nil then
-        return nil, "domain_used_dnsapi_key_detail should not be nil when enabled dns-01 challenge"
-      end
       self.challenge_handlers[c]:update_dnsapi_info(self.domain_used_dnsapi_key_detail)
     end
   end

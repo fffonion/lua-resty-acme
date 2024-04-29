@@ -5,7 +5,7 @@ local _M = {}
 local mt = {__index = _M}
 
 function _M.new(token)
-  if token == nil then
+  if not token or token == "" then
     return nil, "api token is needed"
   end
 
@@ -37,7 +37,6 @@ function _M:get_zone_id(fqdn)
   end
 
   if resp and resp.status == 200 then
-    -- expamle body:
     -- [{
     --  "name":"domain.dynv6.net",
     --  "ipv4address":"",
@@ -104,7 +103,6 @@ function _M:get_record_id(zone_id, fqdn)
   end
 
   if resp and resp.status == 200 then
-    -- expamle body:
     -- [{
     --   "type":"TXT",
     --   "name":"_acme-challenge",
