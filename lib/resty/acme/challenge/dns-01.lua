@@ -42,10 +42,10 @@ local function choose_dnsapi(self, domain)
     return nil, "not dnsapi key for domain"
   end
   local provider = self.domain_used_dnsapi_key_detail[domain].provider
-  log(ngx.DEBUG, "use dnsapi provider: ", provider)
   if not provider then
     return nil, "dnsapi provider not support"
   end
+  log(ngx.DEBUG, "use dnsapi provider: ", provider)
   local content = self.domain_used_dnsapi_key_detail[domain].content
   if not content or content == "" then
     return nil, "dnsapi key content is empty"
@@ -79,10 +79,10 @@ function _M:register_challenge(_, response, domains)
     local trim_domain = domain:gsub("*.", "")
     local txt_record = calculate_txt_record(response)
     local result, err = dnsapi:post_txt_record("_acme-challenge." .. trim_domain, txt_record)
-    log(ngx.DEBUG, "dnsapi post_txt_record returns: ", result)
     if err then
       return err
     end
+    log(ngx.INFO, "dnsapi post_txt_record returns: ", result)
   end
 end
 
@@ -99,10 +99,10 @@ function _M:cleanup_challenge(_--[[challenge]], domains)
     end
     local trim_domain = domain:gsub("*.", "")
     local result, err = dnsapi:delete_txt_record("_acme-challenge." .. trim_domain)
-    log(ngx.DEBUG, "dnsapi delete_txt_record returns: ", result)
     if err then
       return err
     end
+    log(ngx.INFO, "dnsapi delete_txt_record returns: ", result)
   end
 end
 
