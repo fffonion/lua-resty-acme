@@ -144,6 +144,9 @@ function _M:delete_txt_record(fqdn)
     return nil, err
   end
   local record_id, err = self:get_record_id(zone_id, fqdn)
+  if err then
+    return nil, err
+  end
   local url = self.endpoint .. "/zones/" .. zone_id .. "/dns_records/" .. record_id
   local resp, err = self.httpc:request_uri(url,
     {

@@ -548,10 +548,10 @@ local function find_wildcard_domain(domain)
   end
 
   for _, w in ipairs(domain_whitelist) do
-    local is_wildcard, _, err  = w:find("*.", 1, true)
+    local is_wildcard, _, _ = w:find("*.", 1, true)
     if is_wildcard then
       local trim_w = w:gsub("*.", "")
-      local is_matched, _, err = domain:find(trim_w, 1, true)
+      local is_matched, _, _ = domain:find(trim_w, 1, true)
       if is_matched and domain ~= trim_w then
         return w
       end

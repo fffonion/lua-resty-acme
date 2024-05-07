@@ -121,7 +121,7 @@ function _M:get_record_id(zone_id, fqdn)
     end
 
     for _, record in ipairs(body) do
-      local start, theend, err = fqdn:find(record.name, 1, true)
+      local start, _, err = fqdn:find(record.name, 1, true)
       if err then
         return nil, err
       end
@@ -140,6 +140,9 @@ function _M:delete_txt_record(fqdn)
     return nil, err
   end
   local record_id, err = self:get_record_id(zone_id, fqdn)
+  if err then
+    return nil, err
+  end
   local url = self.endpoint .. "/zones/" .. zone_id .. "/records/" .. record_id
   local resp, err = self.httpc:request_uri(url,
     {
