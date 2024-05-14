@@ -24,7 +24,7 @@ function _M.new(token)
   return self
 end
 
-function _M:get_zone_id(fqdn)
+local function get_zone_id(self, fqdn)
   local url = self.endpoint .. "/zones"
   local resp, err = self.httpc:request_uri(url,
     {
@@ -70,7 +70,7 @@ function _M:get_zone_id(fqdn)
 end
 
 function _M:post_txt_record(fqdn, content)
-  local zone_id, err = self:get_zone_id(fqdn)
+  local zone_id, err = get_zone_id(self, fqdn)
   if err then
     return nil, err
   end
@@ -94,7 +94,7 @@ function _M:post_txt_record(fqdn, content)
   return resp.status
 end
 
-function _M:get_record_id(zone_id, fqdn)
+local function get_record_id(self, zone_id, fqdn)
   local url = self.endpoint .. "/zones/" .. zone_id .. "/dns_records"
   local resp, err = self.httpc:request_uri(url,
     {
@@ -139,11 +139,11 @@ function _M:get_record_id(zone_id, fqdn)
 end
 
 function _M:delete_txt_record(fqdn)
-  local zone_id, err = self:get_zone_id(fqdn)
+  local zone_id, err = get_zone_id(self, fqdn)
   if err then
     return nil, err
   end
-  local record_id, err = self:get_record_id(zone_id, fqdn)
+  local record_id, err = get_record_id(self, zone_id, fqdn)
   if err then
     return nil, err
   end
