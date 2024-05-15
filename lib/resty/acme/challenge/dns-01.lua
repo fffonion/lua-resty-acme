@@ -1,5 +1,6 @@
 local util = require("resty.acme.util")
 local digest = require("resty.openssl.digest")
+local resolver = require("resty.dns.resolver")
 local base64 = require("ngx.base64")
 local cjson = require("cjson")
 local log = util.log
@@ -60,6 +61,35 @@ local function choose_dns_provider(self, domain)
   return nil, "require dns provider error: " .. provider
 end
 
+local function verify_txt_record(record_name, expected_record_content)
+  local r, err = resolver:new{
+    nameservers = {"8.8.8.8", "8.8.4.4"},
+    retrans = 5,
+    timeout = 2000,
+    no_random = true,
+  }
+  if not r then
+    log(ngx.DEBUG, "failed to instantiate the resolver: ", err)
+    return false
+  end
+  local answers, err, _ = r:query(record_name, { qtype = r.TYPE_TXT }, {})
+  if not answers then
+    log(ngx.DEBUG, "failed to query the DNS server: ", err)
+    return false
+  end
+  if answers.errcode then
+    log(ngx.DEBUG, "server returned error code: ", answers.errcode, ": ", answers.errstr)
+    return false
+  end
+  for _, ans in ipairs(answers) do
+    if ans.txt == expected_record_content then
+      log(ngx.DEBUG, "verify txt record ok: ", ans.name, ", content: ", ans.txt)
+      return true
+    end
+  end
+  return false
+end
+
 function _M:update_dns_provider_info(domain_used_dns_provider_key_detail)
   log(ngx.INFO, "update_dns_provider_info: " .. cjson.encode(domain_used_dns_provider_key_detail))
   self.domain_used_dns_provider_key_detail = domain_used_dns_provider_key_detail
@@ -76,13 +106,18 @@ function _M:register_challenge(_, response, domains)
     if err then
       return err
     end
-    local trim_domain = domain:gsub("*.", "")
-    local txt_record = calculate_txt_record(response)
-    local result, err = dnsapi:post_txt_record("_acme-challenge." .. trim_domain, txt_record)
+    local txt_record_name = "_acme-challenge." .. domain:gsub("*.", "")
+    local txt_record_content = calculate_txt_record(response)
+    local result, err = dnsapi:post_txt_record(txt_record_name, txt_record_content)
     if err then
       return err
     end
-    log(ngx.INFO, "dns provider post_txt_record returns: ", result)
+    log(ngx.INFO,
+        "dns provider post_txt_record returns: ", result,
+        ", now waiting for dns record propagation")
+    while not verify_txt_record(txt_record_name, txt_record_content) do
+      ngx.sleep(5)
+    end
   end
 end
 
