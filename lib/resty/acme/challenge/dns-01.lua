@@ -115,8 +115,13 @@ function _M:register_challenge(_, response, domains)
     log(ngx.INFO,
         "dns provider post_txt_record returns: ", result,
         ", now waiting for dns record propagation")
+    local wait_verify_counts = 0
     while not verify_txt_record(txt_record_name, txt_record_content) do
       ngx.sleep(5)
+      wait_verify_counts = wait_verify_counts + 1
+      if wait_verify_counts >= 60 then
+        return "timeout: waiting for 5 mins to verify txt record"
+      end
     end
   end
 end
