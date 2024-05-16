@@ -59,9 +59,10 @@ local default_config = {
   -- if true, the request to nginx waits until the cert has been generated and it is used right away
   blocking = false,
   enabled_delete_not_whitelisted_domain = false,
-  -- the maps of domain and dns provider keys
-  -- like: domain_used_dns_provider_key = { ["*.domain.com"] = "cloudflare_token_default", ["www.domain.com"] = "dynv6_token_default" }
-  domain_used_dns_provider_key = {},
+  -- the maps of domain and dns provider, dns provider could be reused in different domains
+  -- like: domain_dns_provider_mapping = { ["*.domain.com"] = "cloudflare_token_default", ["www.domain.com"] = "dynv6_token_default" }
+  domain_dns_provider_mapping = {},
+  -- one provider could have different key content defined by different names like 'cloudflare_token_1' and 'cloudflare_token_2'
   dns_provider_keys = {
     cloudflare_token_default = {
       -- the module name in 'lib/resty/acme/dns_provider'
@@ -429,10 +430,10 @@ function AUTOSSL.init(autossl_config, acme_config)
   acme_config.account_email = autossl_config.account_email
   acme_config.enabled_challenge_handlers = autossl_config.enabled_challenge_handlers
 
-  acme_config.domain_used_dns_provider_key_detail = acme_config.domain_used_dns_provider_key_detail or {}
-  for domain, key_name in pairs(autossl_config.domain_used_dns_provider_key) do
+  acme_config.dns_provider_keys_mapping = acme_config.dns_provider_keys_mapping or {}
+  for domain, key_name in pairs(autossl_config.domain_dns_provider_mapping) do
     if autossl_config.dns_provider_keys[key_name].content ~= "" then
-      acme_config.domain_used_dns_provider_key_detail[domain] = autossl_config.dns_provider_keys[key_name]
+      acme_config.dns_provider_keys_mapping[domain] = autossl_config.dns_provider_keys[key_name]
     end
   end
 

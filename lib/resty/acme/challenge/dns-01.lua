@@ -12,7 +12,7 @@ local mt = {__index = _M}
 function _M.new(storage)
   local self = setmetatable({
     storage = storage,
-    -- domain_used_dns_provider_key_detail = {
+    -- dns_provider_keys_mapping = {
     --   ["*.domain.com"] = {
     --     provider = "cloudflare",
     --     content = "token"
@@ -22,7 +22,7 @@ function _M.new(storage)
     --     content = "token"
     --   }
     -- }
-    domain_used_dns_provider_key_detail = {}
+    dns_provider_keys_mapping = {}
   }, mt)
   return self
 end
@@ -39,15 +39,15 @@ local function ch_key(challenge)
 end
 
 local function choose_dns_provider(self, domain)
-  if not self.domain_used_dns_provider_key_detail[domain] then
+  if not self.dns_provider_keys_mapping[domain] then
     return nil, "not dns provider key for domain"
   end
-  local provider = self.domain_used_dns_provider_key_detail[domain].provider
+  local provider = self.dns_provider_keys_mapping[domain].provider
   if not provider then
     return nil, "dns provider not support"
   end
   log(ngx.INFO, "used dns provider: ", provider)
-  local content = self.domain_used_dns_provider_key_detail[domain].content
+  local content = self.dns_provider_keys_mapping[domain].content
   if not content or content == "" then
     return nil, "dns provider key content is empty"
   end
@@ -90,9 +90,9 @@ local function verify_txt_record(record_name, expected_record_content)
   return false
 end
 
-function _M:update_dns_provider_info(domain_used_dns_provider_key_detail)
-  log(ngx.INFO, "update_dns_provider_info: " .. cjson.encode(domain_used_dns_provider_key_detail))
-  self.domain_used_dns_provider_key_detail = domain_used_dns_provider_key_detail
+function _M:update_dns_provider_info(dns_provider_keys_mapping)
+  log(ngx.INFO, "update_dns_provider_info: " .. cjson.encode(dns_provider_keys_mapping))
+  self.dns_provider_keys_mapping = dns_provider_keys_mapping
 end
 
 function _M:register_challenge(_, response, domains)
