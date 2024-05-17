@@ -80,7 +80,7 @@ local default_config = {
 local domain_pkeys = {}
 
 local domain_key_types, domain_key_types_count
-local domain_whitelist, domain_whitelist_callback
+local domain_whitelist, domain_whitelist_callback, wildcard_domain_matcher
 local failure_cooloff_callback
 
 --[[
@@ -385,6 +385,37 @@ function AUTOSSL.check_renew(premature)
   end
 end
 
+local function build_wildcard_domain_matcher(domains)
+  local domains_wildcard = {}
+  local domains_wildcard_count = 0
+
+  if domains == nil or domains == ngx.null then
+    return false
+  end
+
+  for _, d in ipairs(domains) do
+    if string.sub(d, 1, 1) == "*" then
+      d = string.gsub(string.sub(d, 2), "%.", "\\.")
+      table.insert(domains_wildcard, d)
+      domains_wildcard_count = domains_wildcard_count + 1
+    end
+  end
+
+  local domains_pattern
+  if domains_wildcard_count > 0 then
+    domains_pattern = "(" .. table.concat(domains_wildcard, "|") .. ")$"
+  end
+
+  return setmetatable({}, {
+    __index = function(_, k)
+      if not domains_pattern then
+        return false
+      end
+      return ngx.re.match(k, domains_pattern, "jo")
+    end
+  })
+end
+
 function AUTOSSL.init(autossl_config, acme_config)
   autossl_config = setmetatable(autossl_config or {}, { __index = default_config })
 
@@ -451,6 +482,8 @@ function AUTOSSL.init(autossl_config, acme_config)
     for _, w in ipairs(domain_whitelist) do
       domain_whitelist[w] = true
     end
+    -- build regex for wildcard domain
+    wildcard_domain_matcher = build_wildcard_domain_matcher(domain_whitelist)
   end
   domain_whitelist_callback = autossl_config.domain_whitelist_callback
   if domain_whitelist_callback and type(domain_whitelist_callback) ~= "function" then
@@ -535,12 +568,20 @@ end
 
 function AUTOSSL.is_domain_whitelisted(domain, is_new_cert_needed)
   if domain_whitelist_callback then
+    -- domain_whitelist_callback always first
     return domain_whitelist_callback(domain, is_new_cert_needed)
-  elseif domain_whitelist then
-    return domain_whitelist[domain]
-  else
-    return true
   end
+  if domain_whitelist[domain] then
+    -- exact match
+    return domain
+  else
+    -- wildcard match
+    local result = wildcard_domain_matcher[domain]
+    if result then
+      return "*" .. result[1]
+    end
+  end
+  return false
 end
 
 function AUTOSSL.ssl_certificate()
@@ -554,14 +595,19 @@ function AUTOSSL.ssl_certificate()
   domain = string.lower(domain)
 
   local result = AUTOSSL.is_domain_whitelisted(domain, false)
-  if not result then
+  if type(result) == "string" and result == domain then
+    -- exact match
+    log(ngx_DEBUG, "exact match in domain_whitelist: ", result)
+  elseif type(result) == "string" and string.sub(result, 1, 1) == "*" then
+    -- wildcard match
+    log(ngx_DEBUG, "wildcard match in domain_whitelist: ", result)
+    domain = result
+  elseif result then
+    -- domain_whitelist_callback
+    log(ngx_DEBUG, "match by domain_whitelist_callback: ", domain)
+  else
     log(ngx_INFO, "domain ", domain, " not in whitelist, skipping")
     return
-  end
-
-  if result.wildcard_domain then
-    -- override as '*.example.com' if user need a wildcard domain cert
-    domain = result.wildcard_domain
   end
 
   local chains_set_count = 0
