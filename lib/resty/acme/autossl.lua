@@ -58,13 +58,22 @@ local default_config = {
   challenge_start_delay = 0,
   -- if true, the request to nginx waits until the cert has been generated and it is used right away
   blocking = false,
+  -- if true, the certificate for domain not in whitelist will be deleted from storage
   enabled_delete_not_whitelisted_domain = false,
+  -- the maps of domain name to the dns_provider name defined in the dns_provider_keys table; domain name supports wildcard
+  domain_dns_provider_mapping = {},
+  -- the dict of dns providers, each provider should have following struct:
+  -- {
+  --   provider = "provider_name", -- "cloudflare" or "dynv6"
+  --   content = "the api key or token",
+  -- }
+  dns_provider_keys = {},
 }
 
 local domain_pkeys = {}
 
 local domain_key_types, domain_key_types_count
-local domain_whitelist, domain_whitelist_callback
+local domain_whitelist, domain_whitelist_callback, wildcard_domain_matcher
 local failure_cooloff_callback
 
 --[[
@@ -369,6 +378,37 @@ function AUTOSSL.check_renew(premature)
   end
 end
 
+local function build_wildcard_domain_matcher(domains)
+  local domains_wildcard = {}
+  local domains_wildcard_count = 0
+
+  if domains == nil or domains == ngx.null then
+    return false
+  end
+
+  for _, d in ipairs(domains) do
+    if string.sub(d, 1, 1) == "*" then
+      d = string.gsub(string.sub(d, 2), "%.", "\\.")
+      table.insert(domains_wildcard, d)
+      domains_wildcard_count = domains_wildcard_count + 1
+    end
+  end
+
+  local domains_pattern
+  if domains_wildcard_count > 0 then
+    domains_pattern = "(" .. table.concat(domains_wildcard, "|") .. ")$"
+  end
+
+  return setmetatable({}, {
+    __index = function(_, k)
+      if not domains_pattern then
+        return false
+      end
+      return ngx.re.match(k, domains_pattern, "jo")
+    end
+  })
+end
+
 function AUTOSSL.init(autossl_config, acme_config)
   autossl_config = setmetatable(autossl_config or {}, { __index = default_config })
 
@@ -413,6 +453,8 @@ function AUTOSSL.init(autossl_config, acme_config)
   end
   acme_config.account_email = autossl_config.account_email
   acme_config.enabled_challenge_handlers = autossl_config.enabled_challenge_handlers
+  acme_config.domain_dns_provider_mapping = autossl_config.domain_dns_provider_mapping
+  acme_config.dns_provider_keys = autossl_config.dns_provider_keys
 
   acme_config.challenge_start_callback = function()
     ngx.sleep(autossl_config.challenge_start_delay)
@@ -428,6 +470,8 @@ function AUTOSSL.init(autossl_config, acme_config)
     for _, w in ipairs(domain_whitelist) do
       domain_whitelist[w] = true
     end
+    -- build regex for wildcard domain
+    wildcard_domain_matcher = build_wildcard_domain_matcher(domain_whitelist)
   end
   domain_whitelist_callback = autossl_config.domain_whitelist_callback
   if domain_whitelist_callback and type(domain_whitelist_callback) ~= "function" then
@@ -512,12 +556,20 @@ end
 
 function AUTOSSL.is_domain_whitelisted(domain, is_new_cert_needed)
   if domain_whitelist_callback then
+    -- domain_whitelist_callback always first
     return domain_whitelist_callback(domain, is_new_cert_needed)
-  elseif domain_whitelist then
-    return domain_whitelist[domain]
-  else
-    return true
   end
+  if domain_whitelist[domain] then
+    -- exact match
+    return domain
+  else
+    -- wildcard match
+    local result = wildcard_domain_matcher[domain]
+    if result then
+      return "*" .. result[1]
+    end
+  end
+  return false
 end
 
 function AUTOSSL.ssl_certificate()
@@ -530,7 +582,18 @@ function AUTOSSL.ssl_certificate()
 
   domain = string.lower(domain)
 
-  if not AUTOSSL.is_domain_whitelisted(domain, false) then
+  local result = AUTOSSL.is_domain_whitelisted(domain, false)
+  if type(result) == "string" and result == domain then
+    -- exact match
+    log(ngx_DEBUG, "exact match in domain_whitelist: ", result)
+  elseif type(result) == "string" and string.sub(result, 1, 1) == "*" then
+    -- wildcard match
+    log(ngx_DEBUG, "wildcard match in domain_whitelist: ", result)
+    domain = result
+  elseif result then
+    -- domain_whitelist_callback
+    log(ngx_DEBUG, "match by domain_whitelist_callback: ", domain)
+  else
     log(ngx_INFO, "domain ", domain, " not in whitelist, skipping")
     return
   end

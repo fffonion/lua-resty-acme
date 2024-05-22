@@ -20,6 +20,7 @@ build = {
    type = "builtin",
    modules = {
       ["resty.acme.autossl"] = "lib/resty/acme/autossl.lua",
+      ["resty.acme.challenge.dns-01"] = "lib/resty/acme/challenge/dns-01.lua",
       ["resty.acme.challenge.http-01"] = "lib/resty/acme/challenge/http-01.lua",
       ["resty.acme.challenge.tls-alpn-01"] = "lib/resty/acme/challenge/tls-alpn-01.lua",
       ["resty.acme.client"] = "lib/resty/acme/client.lua",
