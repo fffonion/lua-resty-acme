@@ -341,6 +341,48 @@ kept same as possible.
 than `shm`. If you must use `shm`, you will need to apply
 [this patch](https://github.com/fffonion/lua-resty-shdict-server/tree/master/patches).
 
+## dns-01 challenge
+
+DNS-01 challenge is supported on lua-resty-acme > 0.13.0. Currently, following DNS providers are supported:
+
+- Cloudflare
+- Dynv6
+
+An example config to use `dns-01` challenge would be:
+
+```lua
+require("resty.acme.autossl").init({
+  -- setting the following to true
+  -- implies that you read and accepted https://letsencrypt.org/repository/
+  tos_accepted = true,
+  -- uncomment following for first time setup
+  -- staging = true,
+  -- uncomment following to enable RSA + ECC double cert
+  -- domain_key_types = { 'rsa', 'ecc' },
+  -- do not set `http-01` or `tls-alpn-01` if you only plan to use dns-01.
+  enabled_challenge_handlers = { 'dns-01' },
+  account_key_path = "/etc/openresty/account.key",
+  account_email = "youemail@youdomain.com",
+  domain_whitelist = { "example.com", "subdomain.anotherdomain.com" },
+
+  domain_dns_provider_mapping = {
+    ["example.com"] = "cloudflare_account_1",
+    ["*.anotherdomain.com"] = "dynv6_account_1",
+  },
+
+  dns_provider_keys = {
+    cloudflare_account_1 = {
+      provider = "cloudflare",
+      content = "apikey of cloudflare",
+    },
+    dynv6_account_1 = {
+      provider = "dynv6",
+      content = "apikey of dynv6",
+    },
+  },
+})
+```
+
 ## resty.acme.autossl
 
 A config table can be passed to `resty.acme.autossl.init()`, the default values are:
@@ -390,6 +432,16 @@ default_config = {
   challenge_start_delay = 0,
   -- if true, the request to nginx waits until the cert has been generated and it is used right away
   blocking = false,
+  -- if true, the certificate for domain not in whitelist will be deleted from storage
+  enabled_delete_not_whitelisted_domain = false,
+  -- the maps of domain name to the dns_provider name defined in the dns_provider_keys table; domain name supports wildcard
+  domain_dns_provider_mapping = {},
+  -- the dict of dns providers, each provider should have following struct:
+  -- {
+  --   provider = "provider_name", -- "cloudflare" or "dynv6"
+  --   content = "the api key or token",
+  -- }
+  dns_provider_keys = {},
 }
 ```
 
@@ -471,6 +523,14 @@ default_config = {
   preferred_chain = nil,
   -- callback function that allows to wait before signaling ACME server to validate
   challenge_start_callback = nil,
+  -- the maps of domain name to the dns_provider name defined in the dns_provider_keys table
+  domain_dns_provider_mapping = {},
+  -- the dict of dns providers, each provider should have following struct:
+  -- {
+  --   provider = "provider_name", -- "cloudflare" or "dynv6"
+  --   content = "the api key or token",
+  -- }
+  dns_provider_keys = {},
 }
 ```
 
