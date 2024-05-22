@@ -139,14 +139,31 @@ with the fallback certificate.
 
 Note that `domain_whitelist` or `domain_whitelist_callback` must be set to include your domain
 that you wish to server autossl, to prevent potential abuse using fake SNI in SSL handshake.
-`domain_whitelist` defines a table that includes all domains should be included, and
-`domain_whitelist_callback` defines a function that accepts domain as parameter and return
-boolean to indicate if it should be included.
+
+`domain_whitelist` defines a table that includes all domains should be included and the CN to be
+used to create cert for. Only a single `*` is allowed as a wildcard.
+
 ```lua
-domain_whitelist = { "domain1.com", "domain2.com", "domain3.com" },
+domain_whitelist = { "domain1.com", "domain2.com", "domain3.com", "*.domain4.com" },
 ```
 
-To match a pattern in your domain name, for example all subdomains under `example.com`, use:
+## Wildcard certificates
+
+To enable this library to create wildcard certificate, the following requirements must be met:
+
+- The wildcard domain appear exactly as `*.somedomain.com` in `domain_whitelist`.
+- `dns-01` challenge is enabled and a dns provider that has `domains` matching the domain is configured.
+
+Otherwise a non-wildcard certificate will be created as fallback.
+
+## Advanced Usage
+
+### Use a function to include domains
+
+`domain_whitelist_callback` defines a function that accepts domain as parameter and return
+boolean to indicate if it should be included.
+
+To match a pattern in your domain name, for example **all** subdomains under `example.com`, use:
 
 ```lua
 domain_whitelist_callback = function(domain, is_new_cert_needed)
@@ -176,6 +193,8 @@ end}),
 
 `domain_whitelist_callback` function is provided with a second argument,
 which indicates whether the certificate is about to be served on incoming HTTP request (false) or new certificate is about to be requested (true). This allows to use cached values on hot path (serving requests) while fetching fresh data from storage for new certificates. One may also implement different logic, e.g. do extra checks before requesting new cert.
+
+### Define failure cooloff period
 
 In case of certificate request failure one may want to prevent ACME client to request another certificate immediatelly. By default, the cooloff period it is set to 300 seconds (5 minutes). It may be customized with `failure_cooloff` or with `failure_cooloff_callback` function, e.g. to implement exponential backoff.
 
@@ -348,6 +367,8 @@ DNS-01 challenge is supported on lua-resty-acme > 0.13.0. Currently, following D
 - Cloudflare
 - Dynv6
 
+To read to how to extend a new DNS provider to work with `dns-01` challenge, see [DNS provider](#dns-providers).
+
 An example config to use `dns-01` challenge would be:
 
 ```lua
@@ -365,19 +386,18 @@ require("resty.acme.autossl").init({
   account_email = "youemail@youdomain.com",
   domain_whitelist = { "example.com", "subdomain.anotherdomain.com" },
 
-  domain_dns_provider_mapping = {
-    ["example.com"] = "cloudflare_account_1",
-    ["*.anotherdomain.com"] = "dynv6_account_1",
-  },
-
-  dns_provider_keys = {
-    cloudflare_account_1 = {
+  dns_provider_accounts = {
+    {
+      name = "cloudflare_prod",
       provider = "cloudflare",
-      content = "apikey of cloudflare",
+      secret = "apikey of cloudflare",
+      domains = { "example.com" },
     },
-    dynv6_account_1 = {
+    {
+      name = "dynv6_staging",
       provider = "dynv6",
-      content = "apikey of dynv6",
+      secret = "apikey of dynv6",
+      domains = { "*.anotherdomain.com" },
     },
   },
 })
@@ -523,14 +543,8 @@ default_config = {
   preferred_chain = nil,
   -- callback function that allows to wait before signaling ACME server to validate
   challenge_start_callback = nil,
-  -- the maps of domain name to the dns_provider name defined in the dns_provider_keys table
-  domain_dns_provider_mapping = {},
   -- the dict of dns providers, each provider should have following struct:
-  -- {
-  --   provider = "provider_name", -- "cloudflare" or "dynv6"
-  --   content = "the api key or token",
-  -- }
-  dns_provider_keys = {},
+  dns_provider_accounts = {},
 }
 ```
 
@@ -761,6 +775,31 @@ storage_config = {
 
 Etcd storage requires [lua-resty-etcd](https://github.com/api7/lua-resty-etcd) library to installed.
 It can be manually installed with `opm install api7/lua-resty-etcd` or `luarocks install lua-resty-etcd`.
+
+
+## DNS providers
+
+TO create a custom DNS provider, follow these steps:
+
+- Create a file like `route53.lua` under `lib/resty/acme/dns_provider`
+- Implement following function signature
+
+```lua
+function _M.new(token)
+  -- ... 
+  return self
+end
+
+function _M:post_txt_record(fqdn, content)
+  return ok, err
+end
+
+function _M:delete_txt_record(fqdn)
+  return ok, err
+end
+```
+
+Where `token` is the apikey, `fqdn` is the DNS record name to set record, and `content` is the value of the record.
 
 
 TODO

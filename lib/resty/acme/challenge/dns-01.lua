@@ -2,7 +2,6 @@ local util = require("resty.acme.util")
 local digest = require("resty.openssl.digest")
 local resolver = require("resty.dns.resolver")
 local base64 = require("ngx.base64")
-local cjson = require("cjson")
 local log = util.log
 local encode_base64url = base64.encode_base64url
 
@@ -12,17 +11,18 @@ local mt = {__index = _M}
 function _M.new(storage)
   local self = setmetatable({
     storage = storage,
-    -- dns_provider_keys_mapping = {
+    -- dns_provider_accounts_mapping = {
     --   ["*.domain.com"] = {
     --     provider = "cloudflare",
-    --     content = "token"
+    --     secret = "token"
     --   },
     --   ["www.domain.com"] = {
     --     provider = "dynv6",
-    --     content = "token"
+    --     secret = "token"
     --   }
     -- }
-    dns_provider_keys_mapping = {}
+    dns_provider_accounts_mapping = {},
+    dns_provider_modules = {},
   }, mt)
   return self
 end
@@ -30,7 +30,6 @@ end
 local function calculate_txt_record(keyauthorization)
   local dgst = assert(digest.new("sha256"):final(keyauthorization))
   local txt_record = encode_base64url(dgst)
-  log(ngx.DEBUG, "calculate txt record: ", txt_record)
   return txt_record
 end
 
@@ -39,26 +38,25 @@ local function ch_key(challenge)
 end
 
 local function choose_dns_provider(self, domain)
-  if not self.dns_provider_keys_mapping[domain] then
-    return nil, "not dns provider key for domain"
+  local prov = self.dns_provider_accounts_mapping[domain]
+  if not prov then
+    return nil, "no dns provider key configured for domain " .. domain
   end
-  local provider = self.dns_provider_keys_mapping[domain].provider
-  if not provider then
-    return nil, "dns provider not support"
+
+  if not prov.provider or not prov.secret then
+    return nil, "provider config malformed for domain " .. domain
   end
-  log(ngx.INFO, "using dns provider: ", provider, " for domain: ", domain)
-  local content = self.dns_provider_keys_mapping[domain].content
-  if not content or content == "" then
-    return nil, "dns provider key content is empty"
+
+  local module = self.dns_provider_modules[prov.provider]
+  if not module then
+    return nil, "provider " .. prov.provider .. " is not loaded for domain " .. domain
   end
-  local ok, module = pcall(require, "resty.acme.dns_provider." .. provider)
-  if ok then
-    local handler, err = module.new(content)
-    if not err then
-      return handler
-    end
+
+  local handler, err = module.new(prov.secret)
+  if not err then
+    return handler
   end
-  return nil, "require dns provider error: " .. provider
+  return nil, "dns provider init error: " .. err  .. " for domain " .. domain
 end
 
 local function verify_txt_record(record_name, expected_record_content)
@@ -87,9 +85,36 @@ local function verify_txt_record(record_name, expected_record_content)
   return false, "txt record mismatch"
 end
 
-function _M:update_dns_provider_info(dns_provider_keys_mapping)
-  log(ngx.INFO, "update_dns_provider_info: " .. cjson.encode(dns_provider_keys_mapping))
-  self.dns_provider_keys_mapping = dns_provider_keys_mapping
+function _M:update_dns_provider_info(dns_provider_accounts)
+  self.dns_provider_accounts_mapping = {}
+  self.dns_provider_modules = {}
+
+  for i, account in ipairs(dns_provider_accounts) do
+    if not account.name then
+      return nil, "#" .. i .. " element in dns_provider_accounts doesn't have a name"
+    end
+    if not account.secret then
+      return nil, "dns provider account " .. account.name .." doesn't have a secret"
+    end
+    if not account.provider then
+      return nil, "dns provider account " .. account.name .." doesn't have a provider"
+    end
+
+    if not self.dns_provider_modules[account.provider] then
+      local ok, perr = pcall(require, "resty.acme.dns_provider." .. account.provider)
+      if not ok then
+        return nil, "dns provider " .. account.provider .. " failed to load: " .. perr
+      end
+
+      self.dns_provider_modules[account.provider] = perr
+    end
+
+    for _, domain in ipairs(account.domains) do
+      self.dns_provider_accounts_mapping[domain] = account
+    end
+  end
+
+  return true
 end
 
 function _M:register_challenge(_, response, domains)
@@ -103,15 +128,20 @@ function _M:register_challenge(_, response, domains)
     if err then
       return err
     end
+
     local txt_record_name = "_acme-challenge." .. domain:gsub("*.", "")
     local txt_record_content = calculate_txt_record(response)
-    local result, err = dnsapi:post_txt_record(txt_record_name, txt_record_content)
+    log(ngx.DEBUG, "calculated txt record: ", txt_record_content, " for domain: ", domain)
+
+    local _, err = dnsapi:post_txt_record(txt_record_name, txt_record_content)
     if err then
       return err
     end
+
     log(ngx.INFO,
         "dns provider post_txt_record returns: ", result,
         ", now waiting for dns record propagation")
+
     local wait_verify_counts = 0
     while true do
       local ok, err = verify_txt_record(txt_record_name, txt_record_content)
@@ -125,6 +155,8 @@ function _M:register_challenge(_, response, domains)
         return "timeout (5m) exceeded to verify txt record, latest error was: " .. (err or "nil")
       end
     end
+
+    log(ngx.INFO, "txt record for ", txt_record_name, " verified, continue to next domain")
   end
 end
 

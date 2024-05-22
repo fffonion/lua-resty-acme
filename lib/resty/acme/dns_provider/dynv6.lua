@@ -68,7 +68,7 @@ end
 function _M:post_txt_record(fqdn, content)
   local zone_id, err = get_zone_id(self, fqdn)
   if err then
-    return nil, err
+    return nil, "post_txt_record: " .. err
   end
   local url = self.endpoint .. "/zones/" .. zone_id .. "/records"
   local body = {
@@ -87,10 +87,14 @@ function _M:post_txt_record(fqdn, content)
     return nil, err
   end
 
-  return resp.status
+  if resp.status ~= 200 then
+    return nil, "post_txt_record: dynv6 returned non 200 status: " .. resp.status .. " body: " .. resp.body
+  end
+
+  return true
 end
 
-local function get_record_id(self, zone_id, fqdn)
+local function get_record_ids(self, zone_id, fqdn)
   local url = self.endpoint .. "/zones/" .. zone_id .. "/records"
   local resp, err = self.httpc:request_uri(url,
     {
@@ -120,15 +124,17 @@ local function get_record_id(self, zone_id, fqdn)
       return nil, "json decode error"
     end
 
+    local ids = {}
     for _, record in ipairs(body) do
       local start, _, err = fqdn:find(record.name, 1, true)
       if err then
         return nil, err
       end
       if start then
-        return record.id
+        ids[#ids+1] = record.id
       end
     end
+    return ids
   end
 
   return nil, "no matched dns record found"
@@ -137,24 +143,32 @@ end
 function _M:delete_txt_record(fqdn)
   local zone_id, err = get_zone_id(self, fqdn)
   if err then
-    return nil, err
+    return nil, "delete_txt_record: " .. err
   end
-  local record_id, err = get_record_id(self, zone_id, fqdn)
+
+  local record_ids, err = get_record_ids(self, zone_id, fqdn)
   if err then
-    return nil, err
+    return nil, "delete_txt_record: " .. err
   end
-  local url = self.endpoint .. "/zones/" .. zone_id .. "/records/" .. record_id
-  local resp, err = self.httpc:request_uri(url,
-    {
-      method = "DELETE",
-      headers = self.headers
-    }
-  )
-  if err then
-    return nil, err
+
+  for _, record_id in ipairs(record_ids) do
+      local url = self.endpoint .. "/zones/" .. zone_id .. "/records/" .. record_id
+      local resp, err = self.httpc:request_uri(url,
+        {
+          method = "DELETE",
+          headers = self.headers
+        }
+      )
+      if err then
+        return nil, err
+      end
+
+      if resp.status ~= 200 then
+        return nil, "delete_txt_record: dynv6 returned non 200 status: " .. resp.status .. " body: " .. resp.body
+      end
   end
-  -- return 204 not content
-  return resp.status
+
+  return true
 end
 
 return _M
