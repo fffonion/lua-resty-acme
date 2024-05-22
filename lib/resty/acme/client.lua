@@ -54,6 +54,18 @@ local default_config = {
   preferred_chain = nil,
   -- callback function that allows to wait before signaling ACME server to validate
   challenge_start_callback = nil,
+  -- dns provider keys mapping for dns-01 challenge, contains provider and keys detail
+  -- like: dns_provider_keys_mapping = {
+  --   ["*.domain.com"] = {
+  --     provider = "cloudflare",
+  --     content = "token"
+  --   },
+  --   ["www.domain.com"] = {
+  --     provider = "dynv6",
+  --     content = "token"
+  --   }
+  -- }
+  dns_provider_keys_mapping = {}
 }
 
 local function new_httpc()
@@ -90,7 +102,8 @@ function _M.new(conf)
       eab_handler = conf.eab_handler,
       eab_kid = conf.eab_kid,
       eab_hmac_key = decode_base64url(conf.eab_hmac_key),
-      challenge_handlers = {}
+      challenge_handlers = {},
+      dns_provider_keys_mapping = conf.dns_provider_keys_mapping,
     }, mt
   )
 
@@ -114,6 +127,9 @@ function _M.new(conf)
   for _, c in ipairs(conf.enabled_challenge_handlers) do
     local handler = require("resty.acme.challenge." .. c)
     self.challenge_handlers[c] = handler.new(self.storage)
+    if c == "dns-01" then
+      self.challenge_handlers[c]:update_dns_provider_info(self.dns_provider_keys_mapping)
+    end
   end
 
   if conf.account_key then
