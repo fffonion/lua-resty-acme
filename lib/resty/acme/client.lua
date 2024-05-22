@@ -54,6 +54,10 @@ local default_config = {
   preferred_chain = nil,
   -- callback function that allows to wait before signaling ACME server to validate
   challenge_start_callback = nil,
+  -- the maps of domain name to the dns_provider name defined in the dns_provider_keys table; domain name supports wildcard
+  domain_dns_provider_mapping = {},
+  -- the dict of dns providers, each provider should have following struct:
+  dns_provider_keys = {},
 }
 
 local function new_httpc()
@@ -90,7 +94,8 @@ function _M.new(conf)
       eab_handler = conf.eab_handler,
       eab_kid = conf.eab_kid,
       eab_hmac_key = decode_base64url(conf.eab_hmac_key),
-      challenge_handlers = {}
+      challenge_handlers = {},
+      dns_provider_keys_mapping = {},
     }, mt
   )
 
@@ -110,10 +115,19 @@ function _M.new(conf)
     return nil, "at least one challenge handler is needed"
   end
 
+  for domain, key_name in pairs(conf.domain_dns_provider_mapping) do
+    if conf.dns_provider_keys[key_name].content ~= "" then
+      self.dns_provider_keys_mapping[domain] = conf.dns_provider_keys[key_name]
+    end
+  end
+
   -- TODO: catch error and return gracefully
   for _, c in ipairs(conf.enabled_challenge_handlers) do
     local handler = require("resty.acme.challenge." .. c)
     self.challenge_handlers[c] = handler.new(self.storage)
+    if c == "dns-01" then
+      self.challenge_handlers[c]:update_dns_provider_info(self.dns_provider_keys_mapping)
+    end
   end
 
   if conf.account_key then
