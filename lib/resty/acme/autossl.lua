@@ -60,20 +60,20 @@ local default_config = {
   blocking = false,
   -- if true, the certificate for domain not in whitelist will be deleted from storage
   enabled_delete_not_whitelisted_domain = false,
-  -- the maps of domain name to the dns_provider name defined in the dns_provider_keys table; domain name supports wildcard
-  domain_dns_provider_mapping = {},
   -- the dict of dns providers, each provider should have following struct:
   -- {
+  --   name = "prod_account",
   --   provider = "provider_name", -- "cloudflare" or "dynv6"
-  --   content = "the api key or token",
+  --   secret  = "the api key or token",
+  --   domains = { "example.com", "*.example.com" }, -- the list of domains that can be used with this provider
   -- }
-  dns_provider_keys = {},
+  dns_provider_accounts = {},
 }
 
 local domain_pkeys = {}
 
 local domain_key_types, domain_key_types_count
-local domain_whitelist, domain_whitelist_callback, wildcard_domain_matcher
+local domain_whitelist, domain_whitelist_callback, domain_wildcard_matcher
 local failure_cooloff_callback
 
 --[[
@@ -212,6 +212,7 @@ local function update_cert_handler(data)
     ngx.update_time()
     log(ngx_INFO, ngx.now() - t,  "s spent in creating new ", typ, " private key")
   end
+
   local cert, err = AUTOSSL.client:order_certificate(pkey, domain)
   if err then
     log(ngx_ERR, "error updating cert for ", domain, " err: ", err)
@@ -378,7 +379,7 @@ function AUTOSSL.check_renew(premature)
   end
 end
 
-local function build_wildcard_domain_matcher(domains)
+local function build_domain_wildcard_matcher(domains)
   local domains_wildcard = {}
   local domains_wildcard_count = 0
 
@@ -452,9 +453,16 @@ function AUTOSSL.init(autossl_config, acme_config)
     acme_config.api_uri = "https://acme-staging-v02.api.letsencrypt.org/directory"
   end
   acme_config.account_email = autossl_config.account_email
-  acme_config.enabled_challenge_handlers = autossl_config.enabled_challenge_handlers
-  acme_config.domain_dns_provider_mapping = autossl_config.domain_dns_provider_mapping
-  acme_config.dns_provider_keys = autossl_config.dns_provider_keys
+  acme_config.dns_provider_accounts = autossl_config.dns_provider_accounts
+
+  local ech = autossl_config.enabled_challenge_handlers
+  for _, ch in ipairs(ech) do
+    if ch == "dns-01" then
+      AUTOSSL.dns_01_enabled = true
+      break
+    end
+  end
+  acme_config.enabled_challenge_handlers = ech
 
   acme_config.challenge_start_callback = function()
     ngx.sleep(autossl_config.challenge_start_delay)
@@ -471,7 +479,7 @@ function AUTOSSL.init(autossl_config, acme_config)
       domain_whitelist[w] = true
     end
     -- build regex for wildcard domain
-    wildcard_domain_matcher = build_wildcard_domain_matcher(domain_whitelist)
+    domain_wildcard_matcher = build_domain_wildcard_matcher(domain_whitelist)
   end
   domain_whitelist_callback = autossl_config.domain_whitelist_callback
   if domain_whitelist_callback and type(domain_whitelist_callback) ~= "function" then
@@ -557,14 +565,14 @@ end
 function AUTOSSL.is_domain_whitelisted(domain, is_new_cert_needed)
   if domain_whitelist_callback then
     -- domain_whitelist_callback always first
-    return domain_whitelist_callback(domain, is_new_cert_needed)
+    return domain_whitelist_callback(domain, is_new_cert_needed) and domain or false
   end
-  if domain_whitelist[domain] then
+  if domain_whitelist and domain_whitelist[domain] then
     -- exact match
     return domain
-  else
+  elseif domain_wildcard_matcher then
     -- wildcard match
-    local result = wildcard_domain_matcher[domain]
+    local result = domain_wildcard_matcher[domain]
     if result then
       return "*" .. result[1]
     end
@@ -580,22 +588,23 @@ function AUTOSSL.ssl_certificate()
     return
   end
 
-  domain = string.lower(domain)
+  local orig_domain = string.lower(domain)
+  domain = AUTOSSL.is_domain_whitelisted(orig_domain, false)
 
-  local result = AUTOSSL.is_domain_whitelisted(domain, false)
-  if type(result) == "string" and result == domain then
-    -- exact match
-    log(ngx_DEBUG, "exact match in domain_whitelist: ", result)
-  elseif type(result) == "string" and string.sub(result, 1, 1) == "*" then
-    -- wildcard match
-    log(ngx_DEBUG, "wildcard match in domain_whitelist: ", result)
-    domain = result
-  elseif result then
-    -- domain_whitelist_callback
-    log(ngx_DEBUG, "match by domain_whitelist_callback: ", domain)
-  else
-    log(ngx_INFO, "domain ", domain, " not in whitelist, skipping")
+  if not domain then
+    log(ngx_INFO, "domain ", orig_domain, " not in whitelist, skipping")
     return
+  end
+
+  if domain ~= orig_domain then
+    if AUTOSSL.dns_01_enabled then
+      log(ngx_INFO, "domain ", orig_domain, " is matched to ", domain, " in certificate")
+    else
+      log(ngx_INFO, orig_domain, " matched to wildcard ", domain, " but dns-01 is not enabled, ",
+                    "non-wildcard cert will be created")
+      domain = orig_domain
+    end
+
   end
 
   local chains_set_count = 0
