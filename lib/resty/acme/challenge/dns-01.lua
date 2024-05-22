@@ -46,7 +46,7 @@ local function choose_dns_provider(self, domain)
   if not provider then
     return nil, "dns provider not support"
   end
-  log(ngx.INFO, "used dns provider: ", provider)
+  log(ngx.INFO, "using dns provider: ", provider, " for domain: ", domain)
   local content = self.dns_provider_keys_mapping[domain].content
   if not content or content == "" then
     return nil, "dns provider key content is empty"
@@ -69,17 +69,14 @@ local function verify_txt_record(record_name, expected_record_content)
     no_random = true,
   }
   if not r then
-    log(ngx.DEBUG, "failed to instantiate the resolver: ", err)
-    return false
+    return false, "failed to instantiate the resolver: " .. err
   end
   local answers, err, _ = r:query(record_name, { qtype = r.TYPE_TXT }, {})
   if not answers then
-    log(ngx.DEBUG, "failed to query the DNS server: ", err)
-    return false
+    return false, "failed to query the DNS server: " .. err
   end
   if answers.errcode then
-    log(ngx.DEBUG, "server returned error code: ", answers.errcode, ": ", answers.errstr)
-    return false
+    return false, "server returned error code: " .. answers.errcode .. ": " .. (answers.errstr or "nil")
   end
   for _, ans in ipairs(answers) do
     if ans.txt == expected_record_content then
@@ -87,7 +84,7 @@ local function verify_txt_record(record_name, expected_record_content)
       return true
     end
   end
-  return false
+  return false, "txt record mismatch"
 end
 
 function _M:update_dns_provider_info(dns_provider_keys_mapping)
@@ -116,11 +113,16 @@ function _M:register_challenge(_, response, domains)
         "dns provider post_txt_record returns: ", result,
         ", now waiting for dns record propagation")
     local wait_verify_counts = 0
-    while not verify_txt_record(txt_record_name, txt_record_content) do
+    while true do
+      local ok, err = verify_txt_record(txt_record_name, txt_record_content)
+      if ok then
+        break
+      end
+      log(ngx.DEBUG, "unable to verify txt record, last error was: ", err, ", retrying in 5 seconds")
       ngx.sleep(5)
       wait_verify_counts = wait_verify_counts + 1
       if wait_verify_counts >= 60 then
-        return "timeout: waiting for 5 mins to verify txt record"
+        return "timeout (5m) exceeded to verify txt record, latest error was: " .. (err or "nil")
       end
     end
   end
@@ -142,7 +144,7 @@ function _M:cleanup_challenge(_--[[challenge]], domains)
     if err then
       return err
     end
-    log(ngx.INFO, "dns provider delete_txt_record returns: ", result)
+    log(ngx.DEBUG, "dns provider delete_txt_record returns: ", result)
   end
 end
 

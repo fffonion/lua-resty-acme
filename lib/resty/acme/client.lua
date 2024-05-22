@@ -103,7 +103,7 @@ function _M.new(conf)
       eab_kid = conf.eab_kid,
       eab_hmac_key = decode_base64url(conf.eab_hmac_key),
       challenge_handlers = {},
-      dns_provider_keys_mapping = conf.dns_provider_keys_mapping
+      dns_provider_keys_mapping = conf.dns_provider_keys_mapping,
     }, mt
   )
 
