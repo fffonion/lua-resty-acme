@@ -408,6 +408,8 @@ require("resty.acme.autossl").init({
 })
 ```
 
+By default, this library tries up to 5 minutes for DNS propagation. If the default TTL for dns provider is longer than that, user may want to tune up `challenge_start_delay` manually to wait longer.
+
 ## resty.acme.autossl
 
 A config table can be passed to `resty.acme.autossl.init()`, the default values are:
