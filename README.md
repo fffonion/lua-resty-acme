@@ -156,6 +156,8 @@ To enable this library to create wildcard certificate, the following requirement
 
 Otherwise a non-wildcard certificate will be created as fallback.
 
+By default, the wildcard domain `*.example.com` will appear in Common Name. When `wildcard_domain_in_san` is set to `true` however, a cert with Common Name `example.com` and Subject Alternate Name `*.example.com` will be created. Note both `*.example.com` and `example.com` should appear in `dns_provider_accounts`.
+
 ## Advanced Usage
 
 ### Use a function to include domains
@@ -400,6 +402,8 @@ require("resty.acme.autossl").init({
       domains = { "*.anotherdomain.com" },
     },
   },
+  -- uncomment following to create anotherdomain.com in CN and *.anotherdomain.com in SAN
+  -- wildcard_domain_in_san = true,
 })
 ```
 
@@ -454,14 +458,16 @@ default_config = {
   blocking = false,
   -- if true, the certificate for domain not in whitelist will be deleted from storage
   enabled_delete_not_whitelisted_domain = false,
-  -- the maps of domain name to the dns_provider name defined in the dns_provider_keys table; domain name supports wildcard
-  domain_dns_provider_mapping = {},
   -- the dict of dns providers, each provider should have following struct:
   -- {
+  --   name = "prod_account",
   --   provider = "provider_name", -- "cloudflare" or "dynv6"
-  --   content = "the api key or token",
+  --   secret  = "the api key or token",
+  --   domains = { "example.com", "*.example.com" }, -- the list of domains that can be used with this provider
   -- }
-  dns_provider_keys = {},
+  dns_provider_accounts = {},
+  -- if enabled, wildcard domains like *.example.com will be created as SAN and CN will be example.com
+  wildcard_domain_in_san = false,
 }
 ```
 
