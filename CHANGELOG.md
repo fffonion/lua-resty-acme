@@ -2,6 +2,19 @@
 ## [Unreleased]
 
 
+<a name="0.14.0"></a>
+## [0.14.0] - 2024-05-28
+### bug fixes
+- ***:** provide better robustness when waiting for DNS propagation [3ce2614](https://github.com/fffonion/lua-resty-acme/commit/3ce261462ff91deda67bd541fcd35ad924169a36)
+- ***:** cleanup API for dns-01 challenge [a1b43f1](https://github.com/fffonion/lua-resty-acme/commit/a1b43f1a7980ee4f88a3cfe3ab7b1bd5a46471be)
+
+### features
+- ***:** support dns-01 challenge [67a5711](https://github.com/fffonion/lua-resty-acme/commit/67a5711d6e1bd0f36735fd4ffcf53141bb73a0f6)
+- **autossl:** support create wildcard cert in SAN [8ed36c3](https://github.com/fffonion/lua-resty-acme/commit/8ed36c3a959a759356c608a4f385a5dcc3f887df)
+- **dns-01:** add dnspod-intl provider [0c12f89](https://github.com/fffonion/lua-resty-acme/commit/0c12f89f3d54f1f935fd12a0a148a7aa136dd482)
+- **dns-01:** add cloudflare and dynv6 DNS provider [be1a27a](https://github.com/fffonion/lua-resty-acme/commit/be1a27a5f82fcb0dd7105be04f816427655a06ca)
+
+
 <a name="0.13.0"></a>
 ## [0.13.0] - 2024-03-28
 ### bug fixes
@@ -299,7 +312,8 @@
 - **crypto:** ffi openssl supports generating ec certificates [bc9d989](https://github.com/fffonion/lua-resty-acme/commit/bc9d989b4eb8bfa954f2f1ab08b0449957a27402)
 
 
-[Unreleased]: https://github.com/fffonion/lua-resty-acme/compare/0.13.0...HEAD
+[Unreleased]: https://github.com/fffonion/lua-resty-acme/compare/0.14.0...HEAD
+[0.14.0]: https://github.com/fffonion/lua-resty-acme/compare/0.13.0...0.14.0
 [0.13.0]: https://github.com/fffonion/lua-resty-acme/compare/0.12.0...0.13.0
 [0.12.0]: https://github.com/fffonion/lua-resty-acme/compare/0.11.0...0.12.0
 [0.11.0]: https://github.com/fffonion/lua-resty-acme/compare/0.10.1...0.11.0
