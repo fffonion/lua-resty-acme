@@ -68,6 +68,8 @@ local default_config = {
   --   domains = { "example.com", "*.example.com" }, -- the list of domains that can be used with this provider
   -- }
   dns_provider_accounts = {},
+  -- if enabled, wildcard domains like *.example.com will be created as SAN and CN will be example.com
+  wildcard_domain_in_san = false,
 }
 
 local domain_pkeys = {}
@@ -213,7 +215,15 @@ local function update_cert_handler(data)
     log(ngx_INFO, ngx.now() - t,  "s spent in creating new ", typ, " private key")
   end
 
-  local cert, err = AUTOSSL.client:order_certificate(pkey, domain)
+  -- create example.com automatically if we are creating *.example.com
+  local alt_domain
+  if domain:sub(1, 1) == "*" and AUTOSSL.config.wildcard_domain_in_san then
+    alt_domain = domain
+    domain = domain:sub(3)
+    log(ngx_INFO, "creating wildcard domain certificate using SAN")
+  end
+
+  local cert, err = AUTOSSL.client:order_certificate(pkey, domain, alt_domain)
   if err then
     log(ngx_ERR, "error updating cert for ", domain, " err: ", err)
     return err
