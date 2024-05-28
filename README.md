@@ -832,6 +832,7 @@ Credits
 
 - Improvements of `file` storage by [@dbalagansky](https://github.com/dbalagansky)
 - Addition of kubernetes auth in 'vault' storage by [@UXabre](https://github.com/UXabre/)
+- Initial support of `dns-01` challenge by [@yuweizzz](https://github.com/yuweizzz)
 
 
 Copyright and License
