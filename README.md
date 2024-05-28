@@ -366,8 +366,9 @@ than `shm`. If you must use `shm`, you will need to apply
 
 DNS-01 challenge is supported on lua-resty-acme > 0.13.0. Currently, following DNS providers are supported:
 
-- Cloudflare
-- Dynv6
+- `cloudflare`: Cloudflare
+- `dynv6`: Dynv6
+- `dnspod-intl`: Dnspod International (only Dnspod token is supported and use `id,token` in secret field)
 
 To read to how to extend a new DNS provider to work with `dns-01` challenge, see [DNS provider](#dns-providers).
 
