@@ -475,6 +475,7 @@ function AUTOSSL.init(autossl_config, acme_config)
   acme_config.enabled_challenge_handlers = ech
 
   acme_config.challenge_start_callback = function()
+    ngx.log(ngx.INFO, "wait for ", autossl_config.challenge_start_delay, " seconds to continue")
     ngx.sleep(autossl_config.challenge_start_delay)
     return true
   end

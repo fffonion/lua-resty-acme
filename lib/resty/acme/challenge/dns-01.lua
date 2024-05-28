@@ -69,7 +69,7 @@ local function verify_txt_record(record_name, expected_record_content)
   if not r then
     return false, "failed to instantiate the resolver: " .. err
   end
-  local answers, err, _ = r:query(record_name, { qtype = r.TYPE_TXT }, {})
+  local answers, err, _ = r:tcp_query(record_name, { qtype = r.TYPE_TXT }, {})
   if not answers then
     return false, "failed to query the DNS server: " .. err
   end
@@ -138,9 +138,7 @@ function _M:register_challenge(_, response, domains)
       return err
     end
 
-    log(ngx.INFO,
-        "dns provider post_txt_record returns: ", result,
-        ", now waiting for dns record propagation")
+    log(ngx.INFO, "waiting up to 5 minutes for dns record propagation on ", txt_record_name)
 
     local wait_verify_counts = 0
     while true do
