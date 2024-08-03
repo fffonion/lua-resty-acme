@@ -171,4 +171,4 @@ jobs:
       if: failure()
       run: |
         pushd t/fixtures
-        docker-compose logs
+        docker compose logs

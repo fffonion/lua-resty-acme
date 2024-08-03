@@ -1,13 +1,21 @@
 #!/bin/bash
 
-echo "Prepare containers"
-docker run -d -e CONSUL_CLIENT_INTERFACE='eth0' -e CONSUL_BIND_INTERFACE='eth0' -p 127.0.0.1:8500:8500 hashicorp/consul agent -server -bootstrap-expect=1
+SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+export HOST_IP="$(hostname -I | awk '{print $1}')"
+
 openssl req -x509 -newkey rsa:4096 -keyout /tmp/key.pem -out /tmp/cert.pem -days 1 -nodes -subj '/CN=some.vault'
 chmod 777 /tmp/key.pem /tmp/cert.pem
-docker run -d --user root --cap-add=IPC_LOCK -e VAULT_DEV_ROOT_TOKEN_ID=root --name=vault -e 'VAULT_LOCAL_CONFIG={"listener":{"tcp":{"tls_key_file":"/tmp/key.pem","tls_cert_file":"/tmp/cert.pem","address":"0.0.0.0:8210"}}}' -v /tmp/key.pem:/tmp/key.pem -v /tmp/cert.pem:/tmp/cert.pem -p 127.0.0.1:8200:8200 -p 127.0.0.1:8210:8210 hashicorp/vault server -dev
-docker logs vault
-docker run -d -v /usr/share/ca-certificates/:/etc/ssl/certs -p 4001:4001 -p 2380:2380 -p 2379:2379  --name etcd quay.io/coreos/etcd:v2.3.8  -name etcd0  -advertise-client-urls http://${HostIP}:2379,http://${HostIP}:4001  -listen-client-urls http://0.0.0.0:2379,http://0.0.0.0:4001  -initial-advertise-peer-urls http://${HostIP}:2380  -listen-peer-urls http://0.0.0.0:2380  -initial-cluster-token etcd-cluster-1  -initial-cluster etcd0=http://${HostIP}:2380  -initial-cluster-state new
-docker logs etcd
+
+echo "Prepare containers"
+pushd "$SCRIPT_DIR"
+docker compose up -d || (
+    docker compose logs vault;
+    docker compose logs etcd;
+    docker compose logs consul;
+    exit 1
+)
+popd
+
 
 echo "Prepare vault for JWT auth"
 curl 'https://localhost:8210/v1/sys/auth/kubernetes.test' -k -X POST -H 'X-Vault-Token: root' -H 'Content-Type: application/json; charset=utf-8' --data-raw '{"path":"kubernetes.test","type":"jwt","config":{}}'
@@ -15,17 +23,12 @@ curl 'https://localhost:8210/v1/auth/kubernetes.test/config' -k -X PUT -H 'X-Vau
 curl 'https://localhost:8210/v1/auth/kubernetes.test/role/root' -k -X POST -H 'X-Vault-Token: root' -H 'content-type: application/json; charset=utf-8' --data-raw '{"token_policies":["acme"],"role_type":"jwt","user_claim":"kubernetes.io/serviceaccount/service-account.uid","bound_subject":"system:serviceaccount:kong:gateway-kong"}'
 curl 'https://localhost:8210/v1/sys/policies/acl/acme' -k -X PUT -H 'X-Vault-Token: root' -H 'Content-Type: application/json; charset=utf-8' --data-raw '{"name":"acme","policy":"path \"secret/*\" {\n  capabilities = [\"create\", \"read\", \"update\", \"delete\"]\n}"}'
 
-echo "Prepare Pebble"
-pushd t/fixtures
-docker-compose up -d
-
 # on macOS use host.docker.internal
 if [[ "$OSTYPE" == 'darwin'* ]]; then
     host_ip=$(docker run -it --rm alpine ping host.docker.internal -c1|grep -oE "\d+\.\d+\.\d+\.\d+"|head -n1)
     # update the default ip in resolver
     curl --request POST --data '{"ip":"'$host_ip'"}' http://localhost:8055/set-default-ipv4
 fi
-popd
 
 echo "Generate certs"
 openssl genpkey -algorithm RSA -pkeyopt rsa_keygen_bits:4096 -out /tmp/account.key

@@ -20,6 +20,75 @@ services:
       acmenet:
         ipv4_address: 10.30.50.3
 
+  consul:
+    image: hashicorp/consul
+    ports:
+      - "127.0.0.1:8500:8500"
+    command: agent -server -bootstrap-expect=1 -client=0.0.0.0
+    healthcheck:
+      test: ["CMD", "consul", "members"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+  vault:
+    image: hashicorp/vault
+    user: root
+    cap_add:
+      - IPC_LOCK
+    environment:
+      - VAULT_DEV_ROOT_TOKEN_ID=root
+      - VAULT_LOCAL_CONFIG={"listener":{"tcp":{"tls_key_file":"/tmp/key.pem","tls_cert_file":"/tmp/cert.pem","address":"0.0.0.0:8210"}}}
+    volumes:
+      - /tmp/key.pem:/tmp/key.pem
+      - /tmp/cert.pem:/tmp/cert.pem
+    ports:
+      - "127.0.0.1:8200:8200"
+      - "127.0.0.1:8210:8210"
+    command: server -dev
+    healthcheck:
+      test: ["CMD", "vault", "status", "-address", "http://127.0.0.1:8200"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+  etcd:
+    image: quay.io/coreos/etcd:v3.4.33
+    volumes:
+      - /usr/share/ca-certificates/:/etc/ssl/certs
+    ports:
+      - "4001:4001"
+      - "2380:2380"
+      - "2379:2379"
+    environment:
+      - HOST_IP=${HOST_IP}
+    command: >
+      etcd
+      -name etcd0
+      -advertise-client-urls http://${HOST_IP}:2379,http://${HOST_IP}:4001
+      -listen-client-urls http://0.0.0.0:2379,http://0.0.0.0:4001
+      -initial-advertise-peer-urls http://${HOST_IP}:2380
+      -listen-peer-urls http://0.0.0.0:2380
+      -initial-cluster-token etcd-cluster-1
+      -initial-cluster etcd0=http://${HOST_IP}:2380
+      -initial-cluster-state new
+    healthcheck:
+      test: ["CMD", "etcdctl", "endpoint", "health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+  
+  dummy:
+    image: ubuntu
+    command: tail -f /dev/null
+    depends_on:
+      consul:
+        condition: service_healthy
+      vault:
+        condition: service_healthy
+      etcd:
+        condition: service_healthy
+
 networks:
   acmenet:
     driver: bridge
