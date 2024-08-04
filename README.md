@@ -769,13 +769,13 @@ storage_config = {
 
 ### etcd
 
-[etcd](https://etcd.io) based storage. Right now only `v2` protocol is supported.
+[etcd](https://etcd.io) based storage. Right now only `v3` protocol is supported, and etcd server
+version should be >= v3.4.0.
 The default config is:
 
 ```lua
 storage_config = {
     http_host = 'http://127.0.0.1:4001',
-    protocol = 'v2',
     key_prefix = '',
     timeout = 60,
     ssl_verify = false,

@@ -7,10 +7,10 @@ use Cwd qw(cwd);
 my $pwd = cwd();
 
 our $HttpConfig = qq{
-    lua_package_path "$pwd/lib/?.lua;$pwd/lib/?/init.lua;$pwd/../lib/?.lua;$pwd/../lib/?/init.lua;;";
+    lua_package_path "/home/wow/.luarocks/share/lua/5.1/?.lua;/home/wow/.luarocks/share/lua/5.1/?/init.lua;$pwd/lib/?.lua;$pwd/lib/?/init.lua;$pwd/../lib/?.lua;$pwd/../lib/?/init.lua;;";
     init_by_lua_block {
         _G.test_lib = require("resty.acme.storage.etcd")
-        _G.test_cfg = { protocol = "v3" }
+        _G.test_cfg = nil
         _G.test_ttl = 1
     }
 };
@@ -24,9 +24,10 @@ __DATA__
     location =/t {
         content_by_lua_block {
             local st = test_lib.new(test_cfg)
-            local err = st:set("key1", "2")
+            local key = "key1_" .. ngx.now()
+            local err = st:set(key, "2")
             ngx.say(err)
-            local err = st:set("key1", "new value")
+            local err = st:set(key, "new value")
             ngx.say(err)
         }
     }
@@ -44,9 +45,10 @@ __DATA__
     location =/t {
         content_by_lua_block {
             local st = test_lib.new(test_cfg)
-            local err = st:set("key2", "3")
+            local key = "key2_" .. ngx.now()
+            local err = st:set(key, "3")
             ngx.say(err)
-            local v, err = st:get("key2")
+            local v, err = st:get(key)
             ngx.say(err)
             ngx.say(v)
         }
@@ -67,21 +69,22 @@ nil
     location =/t {
         content_by_lua_block {
             local st = test_lib.new(test_cfg)
-            local err = st:set("key3", "3")
+            local key = "key3_" .. ngx.now()
+            local err = st:set(key, "3")
             ngx.say(err)
-            local v, err = st:get("key3")
+            local v, err = st:get(key)
             ngx.say(err)
             ngx.say(v)
-            local err = st:delete("key3")
+            local err = st:delete(key)
             ngx.say(err)
 
             -- now the key should be deleted
-            local v, err = st:get("key3")
+            local v, err = st:get(key)
             ngx.say(err)
             ngx.say(v)
 
             -- delete again with no error
-            local err = st:delete("key3")
+            local err = st:delete(key)
             ngx.say(err)
         }
     }
@@ -105,14 +108,15 @@ nil
     location =/t {
         content_by_lua_block {
             local st = test_lib.new(test_cfg)
-            local err = st:set("prefix1", "bb--")
+            local prefix = "prefix4_" .. ngx.now()
+            local err = st:set(prefix .. "prefix1", "bb--")
             ngx.say(err)
             local err = st:set("pref-x2", "aa--")
             ngx.say(err)
-            local err = st:set("prefix3", "aa--")
+            local err = st:set(prefix .. "prefix3", "aa--")
             ngx.say(err)
 
-            local keys, err = st:list("prefix")
+            local keys, err = st:list(prefix)
             ngx.say(err)
             table.sort(keys)
             for _, p in ipairs(keys) do ngx.say(p) end
@@ -128,8 +132,8 @@ nil
 nil
 nil
 nil
-prefix1
-prefix3
+prefix4.+prefix1
+prefix4.+prefix3
 0
 "
 --- no_error_log
@@ -141,15 +145,24 @@ prefix3
     location =/t {
         content_by_lua_block {
             local st = test_lib.new(test_cfg)
-            local err = st:set("setttl", "bb--", test_ttl)
+            local key = "key5_" .. ngx.now()
+            local err = st:set(key, "bb--", test_ttl)
             ngx.say(err)
-            local v, err = st:get("setttl")
-            ngx.say(err)
-            ngx.say(v)
-            ngx.sleep(test_ttl)
-            local v, err = st:get("setttl")
+            local v, err = st:get(key)
             ngx.say(err)
             ngx.say(v)
+            for i=1, 5 do
+                ngx.sleep(1)
+                local v, err = st:get(key)
+                if err then
+                    ngx.say(err)
+                    ngx.exit(0)
+                elseif not v then
+                    ngx.say(nil)
+                    ngx.exit(0)
+                end
+            end
+            ngx.say("still exists")
         }
     }
 --- request
@@ -158,7 +171,6 @@ prefix3
 "nil
 nil
 bb--
-nil
 nil
 "
 --- no_error_log
@@ -170,15 +182,24 @@ nil
     location =/t {
         content_by_lua_block {
             local st = test_lib.new(test_cfg)
-            local err = st:add("addttl", "bb--", test_ttl)
+            local key = "key6_" .. ngx.now()
+            local err = st:add(key, "bb--", test_ttl)
             ngx.say(err)
-            local v, err = st:get("addttl")
-            ngx.say(err)
-            ngx.say(v)
-            ngx.sleep(test_ttl)
-            local v, err = st:get("addttl")
+            local v, err = st:get(key)
             ngx.say(err)
             ngx.say(v)
+            for i=1, 5 do
+                ngx.sleep(1)
+                local v, err = st:get(key)
+                if err then
+                    ngx.say(err)
+                    ngx.exit(0)
+                elseif not v then
+                    ngx.say(nil)
+                    ngx.exit(0)
+                end
+            end
+            ngx.say("still exists")
         }
     }
 --- request
@@ -187,7 +208,6 @@ nil
 "nil
 nil
 bb--
-nil
 nil
 "
 --- no_error_log
@@ -199,24 +219,31 @@ nil
     location =/t {
         content_by_lua_block {
             local st = test_lib.new(test_cfg)
-            local err = st:set("prefix1", "bb--", test_ttl)
+            local key = "key7_" .. ngx.now()
+            local err = st:set(key, "bb--", test_ttl)
             ngx.say(err)
-            local err = st:add("prefix1", "aa--")
+            local err = st:add(key, "aa--")
             ngx.say(err)
-            local v, err = st:get("prefix1")
-            ngx.say(err)
-            ngx.say(v)
-            -- note: etcd evit expired node not immediately
-            ngx.sleep(test_ttl+0.5)
-            local err = st:add("prefix1", "aa--", test_ttl)
-            ngx.say(err)
-            local v, err = st:get("prefix1")
+            local v, err = st:get(key)
             ngx.say(err)
             ngx.say(v)
             -- note: etcd evit expired node not immediately
-            ngx.sleep(test_ttl+0.5)
-            local err = st:add("prefix1", "aa--", test_ttl)
+            for i=1, 5 do
+                ngx.sleep(1)
+                local v, err = st:get(key)
+                if err then
+                    ngx.say(err)
+                    break
+                elseif not v then
+                    ngx.say("key evicted")
+                    break
+                end
+            end
+            local err = st:add(key, "aa--", test_ttl)
             ngx.say(err)
+            local v, err = st:get(key)
+            ngx.say(err)
+            ngx.say(v)
         }
     }
 --- request
@@ -226,10 +253,10 @@ nil
 exists
 nil
 bb--
+key evicted
 nil
 nil
 aa--
-nil
 "
 --- no_error_log
 [error]
