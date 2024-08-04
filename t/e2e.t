@@ -204,10 +204,10 @@ __DATA__
             }
             local out
             for i=0,15,1 do
-                local proc = ngx_pipe.spawn({'bash', '-c', "echo q |openssl s_client -host 127.0.0.1 -servername ".. ngx.var.domain .. " -port 5001 -cipher ECDHE-RSA-AES128-GCM-SHA256|openssl x509 -noout -text && sleep 0.1"}, opts)
+                local proc = ngx_pipe.spawn({'bash', '-c', "echo q |openssl s_client -host 127.0.0.1 -servername ".. ngx.var.domain .. " -max_protocol TLSv1.2 -port 5001 -cipher ECDHE-RSA-AES128-GCM-SHA256|openssl x509 -noout -text && sleep 0.1"}, opts)
                 local data, err, partial = proc:stdout_read_all()
                 if ngx.re.match(data, ngx.var.domain) then
-                    local proc2 = ngx_pipe.spawn({'bash', '-c', "echo q |openssl s_client -host 127.0.0.1 -servername ".. ngx.var.domain .. " -port 5001 -cipher ECDHE-ECDSA-AES128-GCM-SHA256|openssl x509 -noout -text && sleep 0.1"}, opts)
+                    local proc2 = ngx_pipe.spawn({'bash', '-c', "echo q |openssl s_client -host 127.0.0.1 -servername ".. ngx.var.domain .. " -port 5001 -max_protocol TLSv1.2 -cipher ECDHE-ECDSA-AES128-GCM-SHA256|openssl x509 -noout -text && sleep 0.1"}, opts)
                     local data2, err, partial = proc2:stdout_read_all()
                     ngx.log(ngx.INFO, data, data2)
                     local f = io.open("/tmp/test2.1", "w")
