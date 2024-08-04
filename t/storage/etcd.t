@@ -10,7 +10,7 @@ our $HttpConfig = qq{
     lua_package_path "$pwd/lib/?.lua;$pwd/lib/?/init.lua;$pwd/../lib/?.lua;$pwd/../lib/?/init.lua;;";
     init_by_lua_block {
         _G.test_lib = require("resty.acme.storage.etcd")
-        _G.test_cfg = nil
+        _G.test_cfg = { protocol = "v3" }
         _G.test_ttl = 1
     }
 };
