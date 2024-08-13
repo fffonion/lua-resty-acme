@@ -85,10 +85,7 @@ jobs:
           - 6379:6379
       # Redis with auth enabled
       redis-auth:
-        image: redis
-        command: ["redis-server", "/etc/redis/redis.conf"]
-        volumes:
-          - ./redis.conf:/etc/redis/redis.conf
+        image: redis/redis-stack-server
         # Set health checks to wait until redis has started
         options: >-
           --health-cmd "redis-cli ping"
@@ -97,6 +94,8 @@ jobs:
           --health-retries 5
         ports:
           - 6380:6379
+        env:
+          REDIS_ARGS: "--requirepass passdefault"
 
     steps:
     - name: Checkout source code

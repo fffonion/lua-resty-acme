@@ -561,7 +561,7 @@ test14:50
 --- config
     location =/t {
         content_by_lua_block {
-            local st = test_lib.new({ username = "kong", password = "passkong", port = 6380 })
+            local st = test_lib.new({ username = "default", password = "passdefault", port = 6380 })
             local err = st:set("key2", "3")
             ngx.say(err)
             local v, err = st:get("key2")
@@ -630,7 +630,87 @@ nil
 --- config
     location =/t {
         content_by_lua_block {
+            local st = test_lib.new({ username = "default", port = 6380 })
+            local err = st:set("key2", "3")
+            ngx.say(err)
+            local v, err = st:get("key2")
+            ngx.say(err)
+            ngx.say(v)
+        }
+    }
+--- request
+    GET /t
+--- response_body_like eval
+"NOAUTH Authentication required"
+--- no_error_log
+[error]
+
+=== TEST 19: Redis auth fails with wrong username
+--- http_config eval: $::HttpConfig
+--- config
+    location =/t {
+        content_by_lua_block {
             local st = test_lib.new({ username = "kong", port = 6380 })
+            local err = st:set("key2", "3")
+            ngx.say(err)
+            local v, err = st:get("key2")
+            ngx.say(err)
+            ngx.say(v)
+        }
+    }
+--- request
+    GET /t
+--- response_body_like eval
+"NOAUTH Authentication required"
+--- no_error_log
+[error]
+
+=== TEST 20: Redis auth fails with wrong password and no username with error "authentication failed WRONGPASS"
+--- http_config eval: $::HttpConfig
+--- config
+    location =/t {
+        content_by_lua_block {
+            local st = test_lib.new({ password = "wrongpass", port = 6380 })
+            local err = st:set("key2", "3")
+            ngx.say(err)
+            local v, err = st:get("key2")
+            ngx.say(err)
+            ngx.say(v)
+        }
+    }
+--- request
+    GET /t
+--- response_body_like eval
+"authentication failed WRONGPASS"
+--- no_error_log
+[error]
+
+=== TEST 21: Redis auth fails with wrong password and correct username with error "NOAUTH Authentication required"
+--- http_config eval: $::HttpConfig
+--- config
+    location =/t {
+        content_by_lua_block {
+            local st = test_lib.new({ username = "default", password = "wrongpass", port = 6380 })
+            local err = st:set("key2", "3")
+            ngx.say(err)
+            local v, err = st:get("key2")
+            ngx.say(err)
+            ngx.say(v)
+        }
+    }
+--- request
+    GET /t
+--- response_body_like eval
+"NOAUTH Authentication required"
+--- no_error_log
+[error]
+
+=== TEST 22: Redis auth fails with correct password and wrong username with error "NOAUTH Authentication required"
+--- http_config eval: $::HttpConfig
+--- config
+    location =/t {
+        content_by_lua_block {
+            local st = test_lib.new({ username = "kong", password = "passdefault", port = 6380 })
             local err = st:set("key2", "3")
             ngx.say(err)
             local v, err = st:get("key2")
