@@ -47,7 +47,7 @@ local function op(self, op, ...)
 
   if self.username and self.password then
     local _, err = client:auth(self.username, self.password)
-    if not ok then
+    if err then
       return nil, "authentication failed " .. err
     end
   elseif self.password then
