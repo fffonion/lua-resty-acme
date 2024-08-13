@@ -625,7 +625,7 @@ nil
 --- no_error_log
 [error]
 
-=== TEST 18: Redis auth fails with just username
+=== TEST 18: Redis auth fails with just username with error "NOAUTH Authentication required"
 --- http_config eval: $::HttpConfig
 --- config
     location =/t {
@@ -685,7 +685,7 @@ nil
 --- no_error_log
 [error]
 
-=== TEST 21: Redis auth fails with wrong password and correct username with error "NOAUTH Authentication required"
+=== TEST 21: Redis auth fails with wrong password and correct username with error "authentication failed WRONGPASS"
 --- http_config eval: $::HttpConfig
 --- config
     location =/t {
@@ -701,11 +701,11 @@ nil
 --- request
     GET /t
 --- response_body_like eval
-"NOAUTH Authentication required"
+"authentication failed WRONGPASS"
 --- no_error_log
 [error]
 
-=== TEST 22: Redis auth fails with correct password and wrong username with error "NOAUTH Authentication required"
+=== TEST 22: Redis auth fails with correct password and wrong username with error "authentication failed WRONGPASS"
 --- http_config eval: $::HttpConfig
 --- config
     location =/t {
@@ -721,6 +721,6 @@ nil
 --- request
     GET /t
 --- response_body_like eval
-"NOAUTH Authentication required"
+"authentication failed WRONGPASS"
 --- no_error_log
 [error]
