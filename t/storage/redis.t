@@ -556,3 +556,48 @@ test14:50
 --- no_error_log
 [error]
 
+=== TEST 15: Redis auth works with table
+--- http_config eval: $::HttpConfig
+--- config
+    location =/t {
+        content_by_lua_block {
+            local st = test_lib.new({auth = { username = "kong", password = "passkong" }, host = "172.27.0.2" })
+            local err = st:set("key2", "3")
+            ngx.say(err)
+            local v, err = st:get("key2")
+            ngx.say(err)
+            ngx.say(v)
+        }
+    }
+--- request
+    GET /t
+--- response_body_like eval
+"nil
+nil
+3
+"
+--- no_error_log
+[error]
+
+=== TEST 16: Redis auth works with string
+--- http_config eval: $::HttpConfig
+--- config
+    location =/t {
+        content_by_lua_block {
+            local st = test_lib.new({auth = "passdefault", host = "172.27.0.2" })
+            local err = st:set("key2", "3")
+            ngx.say(err)
+            local v, err = st:get("key2")
+            ngx.say(err)
+            ngx.say(v)
+        }
+    }
+--- request
+    GET /t
+--- response_body_like eval
+"nil
+nil
+3
+"
+--- no_error_log
+[error]
