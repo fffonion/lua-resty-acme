@@ -2,6 +2,17 @@
 ## [Unreleased]
 
 
+<a name="0.15.0"></a>
+## [0.15.0] - 2024-08-14
+### bug fixes
+- **tests:** use tlsv1.2 in dual cert test [415be3f](https://github.com/fffonion/lua-resty-acme/commit/415be3fe2a5bfcc3cd6aac5ab8a736f0a672475c)
+- **tests:** uses v3 protocol for etcd [c3928b5](https://github.com/fffonion/lua-resty-acme/commit/c3928b5e92dd66e9a22d497935a878b59cb26b36)
+
+### features
+- **etcd:** etcd storage to use v3 protocol [a3353b3](https://github.com/fffonion/lua-resty-acme/commit/a3353b3b26b4cb0c17e98dd36f829a0db18e4ef7)
+- **redis:** add support for username/password auth ([#121](https://github.com/fffonion/lua-resty-acme/issues/121)) [186ab23](https://github.com/fffonion/lua-resty-acme/commit/186ab2367c66725b6a38a8f81743328e9a4455e3)
+
+
 <a name="0.14.0"></a>
 ## [0.14.0] - 2024-05-28
 ### bug fixes
@@ -312,7 +323,8 @@
 - **crypto:** ffi openssl supports generating ec certificates [bc9d989](https://github.com/fffonion/lua-resty-acme/commit/bc9d989b4eb8bfa954f2f1ab08b0449957a27402)
 
 
-[Unreleased]: https://github.com/fffonion/lua-resty-acme/compare/0.14.0...HEAD
+[Unreleased]: https://github.com/fffonion/lua-resty-acme/compare/0.15.0...HEAD
+[0.15.0]: https://github.com/fffonion/lua-resty-acme/compare/0.14.0...0.15.0
 [0.14.0]: https://github.com/fffonion/lua-resty-acme/compare/0.13.0...0.14.0
 [0.13.0]: https://github.com/fffonion/lua-resty-acme/compare/0.12.0...0.13.0
 [0.12.0]: https://github.com/fffonion/lua-resty-acme/compare/0.11.0...0.12.0
