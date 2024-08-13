@@ -22,6 +22,8 @@ function _M.new(conf)
       ssl_server_name = conf.ssl_server_name,
       namespace = conf.namespace or "",
       scan_count = conf.scan_count or 10,
+      username = conf.username,
+      password = conf.password,
     },
     mt
   )
@@ -42,8 +44,18 @@ local function op(self, op, ...)
   if not ok then
     return nil, err
   end
-  
-  if self.auth then
+
+  if self.username and self.password then
+    local _, err = client:auth(self.username, self.password)
+    if err then
+      return nil, "authentication failed " .. err
+    end
+  elseif self.password then
+    local _, err = client:auth(self.password)
+    if err then
+      return nil, "authentication failed " .. err
+    end
+  elseif self.auth then
     local _, err = client:auth(self.auth)
     if err then
       return nil, "authentication failed " .. err

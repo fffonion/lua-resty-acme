@@ -556,3 +556,171 @@ test14:50
 --- no_error_log
 [error]
 
+=== TEST 15: Redis auth works with username and password
+--- http_config eval: $::HttpConfig
+--- config
+    location =/t {
+        content_by_lua_block {
+            local st = test_lib.new({ username = "default", password = "passdefault", port = 6380 })
+            local err = st:set("key2", "3")
+            ngx.say(err)
+            local v, err = st:get("key2")
+            ngx.say(err)
+            ngx.say(v)
+        }
+    }
+--- request
+    GET /t
+--- response_body_like eval
+"nil
+nil
+3
+"
+--- no_error_log
+[error]
+
+=== TEST 16: Redis auth works with single auth (backwards compatibility)
+--- http_config eval: $::HttpConfig
+--- config
+    location =/t {
+        content_by_lua_block {
+            local st = test_lib.new({auth = "passdefault", port = 6380 })
+            local err = st:set("key2", "3")
+            ngx.say(err)
+            local v, err = st:get("key2")
+            ngx.say(err)
+            ngx.say(v)
+        }
+    }
+--- request
+    GET /t
+--- response_body_like eval
+"nil
+nil
+3
+"
+--- no_error_log
+[error]
+
+=== TEST 17: Redis auth works with just password
+--- http_config eval: $::HttpConfig
+--- config
+    location =/t {
+        content_by_lua_block {
+            local st = test_lib.new({ password = "passdefault", port = 6380 })
+            local err = st:set("key2", "3")
+            ngx.say(err)
+            local v, err = st:get("key2")
+            ngx.say(err)
+            ngx.say(v)
+        }
+    }
+--- request
+    GET /t
+--- response_body_like eval
+"nil
+nil
+3
+"
+--- no_error_log
+[error]
+
+=== TEST 18: Redis auth fails with just username with error "NOAUTH Authentication required"
+--- http_config eval: $::HttpConfig
+--- config
+    location =/t {
+        content_by_lua_block {
+            local st = test_lib.new({ username = "default", port = 6380 })
+            local err = st:set("key2", "3")
+            ngx.say(err)
+            local v, err = st:get("key2")
+            ngx.say(err)
+            ngx.say(v)
+        }
+    }
+--- request
+    GET /t
+--- response_body_like eval
+"NOAUTH Authentication required"
+--- no_error_log
+[error]
+
+=== TEST 19: Redis auth fails with wrong username
+--- http_config eval: $::HttpConfig
+--- config
+    location =/t {
+        content_by_lua_block {
+            local st = test_lib.new({ username = "kong", port = 6380 })
+            local err = st:set("key2", "3")
+            ngx.say(err)
+            local v, err = st:get("key2")
+            ngx.say(err)
+            ngx.say(v)
+        }
+    }
+--- request
+    GET /t
+--- response_body_like eval
+"NOAUTH Authentication required"
+--- no_error_log
+[error]
+
+=== TEST 20: Redis auth fails with wrong password and no username with error "authentication failed WRONGPASS"
+--- http_config eval: $::HttpConfig
+--- config
+    location =/t {
+        content_by_lua_block {
+            local st = test_lib.new({ password = "wrongpass", port = 6380 })
+            local err = st:set("key2", "3")
+            ngx.say(err)
+            local v, err = st:get("key2")
+            ngx.say(err)
+            ngx.say(v)
+        }
+    }
+--- request
+    GET /t
+--- response_body_like eval
+"authentication failed WRONGPASS"
+--- no_error_log
+[error]
+
+=== TEST 21: Redis auth fails with wrong password and correct username with error "authentication failed WRONGPASS"
+--- http_config eval: $::HttpConfig
+--- config
+    location =/t {
+        content_by_lua_block {
+            local st = test_lib.new({ username = "default", password = "wrongpass", port = 6380 })
+            local err = st:set("key2", "3")
+            ngx.say(err)
+            local v, err = st:get("key2")
+            ngx.say(err)
+            ngx.say(v)
+        }
+    }
+--- request
+    GET /t
+--- response_body_like eval
+"authentication failed WRONGPASS"
+--- no_error_log
+[error]
+
+=== TEST 22: Redis auth fails with correct password and wrong username with error "authentication failed WRONGPASS"
+--- http_config eval: $::HttpConfig
+--- config
+    location =/t {
+        content_by_lua_block {
+            local st = test_lib.new({ username = "kong", password = "passdefault", port = 6380 })
+            local err = st:set("key2", "3")
+            ngx.say(err)
+            local v, err = st:get("key2")
+            ngx.say(err)
+            ngx.say(v)
+        }
+    }
+--- request
+    GET /t
+--- response_body_like eval
+"authentication failed WRONGPASS"
+--- no_error_log
+[error]
