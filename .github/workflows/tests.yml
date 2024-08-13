@@ -49,7 +49,7 @@ jobs:
           lua_nginx_module: "v0.10.21"
           stream_lua_nginx_module: "v0.0.11"
           lua_resty_core: "v0.1.23"
-        
+
     env:
       JOBS: 3
       SH: bash
@@ -67,11 +67,12 @@ jobs:
       LUACHECK_VER: 0.21.1
       CC: gcc
       NGX_BUILD_CC: gcc
-  
+
       NGINX_CC_OPTS: ""
       LUAJIT_CC_OPTS: ""
 
     services:
+      # Redis with auth disabled
       redis:
         image: redis
         # Set health checks to wait until redis has started
@@ -82,11 +83,25 @@ jobs:
           --health-retries 5
         ports:
           - 6379:6379
+      # Redis with auth enabled
+      redis-auth:
+        image: redis
+        command: ["redis-server", "/etc/redis/redis.conf"]
+        volumes:
+          - ./redis.conf:/etc/redis/redis.conf
+        # Set health checks to wait until redis has started
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 6380:6379
 
     steps:
     - name: Checkout source code
       uses: actions/checkout@v2
-    
+
     - name: Setup cache
       uses: actions/cache@v2
       with:

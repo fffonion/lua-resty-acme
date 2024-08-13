@@ -556,12 +556,12 @@ test14:50
 --- no_error_log
 [error]
 
-=== TEST 15: Redis auth works with table
+=== TEST 15: Redis auth works with username and password
 --- http_config eval: $::HttpConfig
 --- config
     location =/t {
         content_by_lua_block {
-            local st = test_lib.new({auth = { username = "kong", password = "passkong" }, host = "172.27.0.2" })
+            local st = test_lib.new({ username = "kong", password = "passkong", port = 6380 })
             local err = st:set("key2", "3")
             ngx.say(err)
             local v, err = st:get("key2")
@@ -579,12 +579,12 @@ nil
 --- no_error_log
 [error]
 
-=== TEST 16: Redis auth works with string
+=== TEST 16: Redis auth works with single auth (backwards compatibility)
 --- http_config eval: $::HttpConfig
 --- config
     location =/t {
         content_by_lua_block {
-            local st = test_lib.new({auth = "passdefault", host = "172.27.0.2" })
+            local st = test_lib.new({auth = "passdefault", port = 6380 })
             local err = st:set("key2", "3")
             ngx.say(err)
             local v, err = st:get("key2")
@@ -599,5 +599,48 @@ nil
 nil
 3
 "
+--- no_error_log
+[error]
+
+=== TEST 17: Redis auth works with just password
+--- http_config eval: $::HttpConfig
+--- config
+    location =/t {
+        content_by_lua_block {
+            local st = test_lib.new({ password = "passdefault", port = 6380 })
+            local err = st:set("key2", "3")
+            ngx.say(err)
+            local v, err = st:get("key2")
+            ngx.say(err)
+            ngx.say(v)
+        }
+    }
+--- request
+    GET /t
+--- response_body_like eval
+"nil
+nil
+3
+"
+--- no_error_log
+[error]
+
+=== TEST 18: Redis auth fails with just username
+--- http_config eval: $::HttpConfig
+--- config
+    location =/t {
+        content_by_lua_block {
+            local st = test_lib.new({ username = "kong", port = 6380 })
+            local err = st:set("key2", "3")
+            ngx.say(err)
+            local v, err = st:get("key2")
+            ngx.say(err)
+            ngx.say(v)
+        }
+    }
+--- request
+    GET /t
+--- response_body_like eval
+"NOAUTH Authentication required"
 --- no_error_log
 [error]
