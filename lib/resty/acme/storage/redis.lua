@@ -42,9 +42,14 @@ local function op(self, op, ...)
   if not ok then
     return nil, err
   end
-  
+
   if self.auth then
-    local _, err = client:auth(self.auth)
+    local _, err
+    if type(self.auth) == "table" then
+      _, err = client:auth(self.auth.username, self.auth.password)
+    else
+      _, err = client:auth(self.auth)
+    end
     if err then
       return nil, "authentication failed " .. err
     end
