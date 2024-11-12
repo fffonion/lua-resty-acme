@@ -694,7 +694,7 @@ storage_config = {
 }
 ```
 
-Redis >= 2.6.0 is required as this storage requires [PEXPIRE](https://redis.io/commands/pexpire).
+Redis >= 2.6.12 is required as this storage requires [SET EX](https://redis.io/commands/set).
 
 ### vault
 
