@@ -24,6 +24,7 @@ function _M.new(conf)
       scan_count = conf.scan_count or 10,
       username = conf.username,
       password = conf.password,
+      pool_size = conf.pool_size or 1,
     },
     mt
   )
