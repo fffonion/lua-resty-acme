@@ -1,6 +1,12 @@
 <a name="unreleased"></a>
 ## [Unreleased]
 
+### bug fixes
+- **client:** fix detection of processing state
+
+### features
+- **storage/redis:** use atomic set ([#105](https://github.com/fffonion/lua-resty-acme/issues/105))
+
 
 <a name="0.15.0"></a>
 ## [0.15.0] - 2024-08-14
