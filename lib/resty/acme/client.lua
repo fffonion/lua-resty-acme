@@ -575,7 +575,7 @@ function _M:order_certificate(domain_key, ...)
     end
     for _, challenge in ipairs(challenges.challenges) do
       local typ = challenge.type
-      if challenge.status ~= 'pending' then
+      if challenge.status ~= 'pending' and challenge.status ~= 'processing' then
         if challenge.status == 'valid' then
           has_valid_challenge = true
         end
